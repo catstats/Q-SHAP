@@ -1,0 +1,33 @@
+Metadata-Version: 2.1
+Name: treeshap-rsq
+Version: 0.1.0
+Summary: Exact computation of treeshap R square in polynomial time
+Home-page: To be filled
+Author: Zhongli Jiang
+Author-email: jiang548@purdue.edu
+License: GPL-2.0
+Platform: UNKNOWN
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: Unix
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.7
+
+This package is used to compute the treeshap R square value in polynomial time.
+
+Please check "Treeshap R Squared Tutorial" for usage.
+
+Reference
+
+- Our paper
+- Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature machine intelligence 2.1 (2020): 56-67.
+- Karczmarz, Adam, et al. "Improved feature importance computation for tree models based on the Banzhaf value." Uncertainty in Artificial Intelligence. PMLR, 2022.
+- Bifet, Albert, Jesse Read, and Chao Xu. "Linear tree shap." Advances in Neural Information Processing Systems 35 (2022): 25818-25828.
+- Chen, Tianqi, and Carlos Guestrin. "Xgboost: A scalable tree boosting system." Proceedings of the 22nd acm sigkdd international conference on knowledge discovery and data mining. 2016.
+
+
