@@ -1,2 +1,4 @@
 **cache**
 build
+*.egg-info
+*.egg-info/
