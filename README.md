@@ -1,6 +1,6 @@
-This package is used to compute the treeshap R square value in polynomial time.
+This package is used to compute the shapley R square value for tree ensembles in polynomial time.
 
-Please check "Treeshap R Squared Tutorial" for usage.
+Please check "Q-SHAP Tutorial" for usage.
 
 Reference
 

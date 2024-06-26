@@ -1,4 +1,4 @@
-from treeshap_rsq import explainer
+from qshap import explainer
 import sklearn.ensemble
 import numpy as np
 import time as time
@@ -113,7 +113,7 @@ loss_multiple = explainer.loss(explainer_rsq, x[0:99], y[0:99], y_mean_ori=np.me
 
 # Visualize rsq 
 # First we can import the module
-from treeshap_rsq import vis_rsq, vis_loss, vis_elbow
+from qshap import vis_rsq, vis_loss, vis_elbow
 
 # # Generate feature names using list comprehension and format them
 feature_names = np.array([f"feature{i}" for i in range(1, rsq_res.shape[0]+1)])

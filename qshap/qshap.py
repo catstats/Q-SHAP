@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit
 #import cProfile  
 from numba import complex128, int32
-from treeshap_rsq.utils import inv_binom_coef, complex_v_invc_degree, store_complex_v_invc, complex_dot_v2, weight, store_complex_root
+from qshap.utils import inv_binom_coef, complex_v_invc_degree, store_complex_v_invc, complex_dot_v2, weight, store_complex_root
 
 
 @njit

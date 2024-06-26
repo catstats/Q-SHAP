@@ -1,5 +1,5 @@
-from treeshap_rsq.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter, divide_chunks
-from treeshap_rsq.treeshap_rsq import loss_treeshap
+from qshap.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter, divide_chunks
+from qshap.qshap import loss_treeshap
 
 from types import SimpleNamespace
 from concurrent.futures import ProcessPoolExecutor
@@ -130,7 +130,7 @@ class explainer:
         -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
 
         Return
-        Treeshap R squared
+        Shapley R-squared
         """
         max_core = os.cpu_count()
         if ncore == -1:

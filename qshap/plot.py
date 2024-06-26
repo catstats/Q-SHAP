@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 from ipywidgets import BoundedIntText, Layout, interactive_output, VBox, HBox
 from IPython.display import display, clear_output
 
-def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_feature=10, title="Treeshap R²", xtitle="Feature index", ytitle="R²", rotation=0, label=None, decimal=3, save_name=None):
+
+def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_feature=10, title="Shapley R²", xtitle="Feature index", ytitle="R²", decimal=3, save_name=None):
     """
-    Visualize treeshap_rsq
+    Visualize Shapley R²
     
     Parameters:
-    -x: 1 dim array, but we recommend array from treeshap rsq OvO ...
+    -x: 1 dim array, but we recommend array from Shapley rsq OvO ...
     -color_map_name: Color map allows to you take a variety color map from matplotlib to customize your visualization color.
     You can try to use "Pastel1", "Pasterl2", "PuBu", "Reds", "Greens" ...
     -horizontal: horizontal plot or not
@@ -17,8 +18,6 @@ def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_fea
     -max_feature: maximum number of features to show
     -xtitle: xtitle, note that it's reversed for horizontal 
     -ytitle: ytitle, note that it's reversed for horizontal 
-    -rotation: rotation of the tick
-    -label: label for the features
     -title: plot title
     -decimal: decimals to show 
     -save_name: the name of the file if you want to save. None as default without saving.
@@ -34,14 +33,6 @@ def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_fea
         
     sorted_x = x[indices]          # Sorted x
     indices = indices[:show_len]
-    if label is not None:
-        if len(x)!=len(label):
-        #error: the length of label and and x must match 
-            raise ValueError("The length of the label and x must match")
-        else:
-            sorted_label = label[indices]
-            sorted_label = sorted_label[:show_len]
-        
     sorted_x = sorted_x[:show_len]
 
     # Creating a color map based on the sorted values
@@ -62,10 +53,7 @@ def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_fea
         bars = plt.bar(range(len(sorted_x)), sorted_x, color=colors)
 
         # Label the x-ticks with the original indices
-        if label is not None:
-            plt.xticks(range(len(sorted_x)), sorted_label, rotation=rotation)
-        else:
-            plt.xticks(range(len(sorted_x)), indices, rotation=rotation)
+        plt.xticks(range(len(sorted_x)), indices)
          
         # Adding the text on top of the bars
         for bar in bars:
@@ -87,10 +75,7 @@ def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_fea
         bars = plt.barh(range(len(sorted_x)), sorted_x, color=colors)
         
         # Label the y-ticks with the original indices
-        if label is not None:
-            plt.yticks(range(len(sorted_x)), sorted_label, rotation=rotation)
-        else:
-            plt.yticks(range(len(sorted_x)), indices, rotation=rotation)
+        plt.yticks(range(len(sorted_x)), indices)
         plt.gca().invert_yaxis()
         
         # Adding the text beside the bars
@@ -112,7 +97,7 @@ def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_fea
     # Add title
     plt.title(title)
 
-    
+
     if save_name is not None:
         name = save_name + ".pdf"
         plt.savefig(name, bbox_inches='tight')
@@ -122,15 +107,6 @@ def vis_rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_fea
 # vis_rsq(rsq_res)
 # # Change color
 # vis_rsq(rsq_res, color_map_name="Pastel2")
-
-# import numpy as np
-
-# # Generate feature names using list comprehension and format them
-# feature_names = np.array([f"feature{i}" for i in range(1, rsq_res.shape[0]+1)])
-
-# # Give it a name and rotate
-# vis_rsq(rsq_res, color_map_name="Pastel2", label=feature_names, rotation=45)
-
 # # Give a horizontal plot, hide model rsq, change the number of features to show
 # vis_rsq(rsq_res, color_map_name="PuBu", horizontal=True, model_rsq=False, max_feature=15, save_name="rsq_eg")
     
@@ -192,45 +168,3 @@ def vis_loss(loss, save_ind=None, save_prefix="Treeshap loss sample", title="Tre
 
 # # Find a lovely plot and save it, say for the 5-th sample
 # vis_loss(loss, save_ind=10)
-        
-
-def vis_elbow(x, max_comp=10, title='Explained Variance by Top Features', marker='o', linestyle='--'):
-    """
-    Construct elbow plot for top features.
-    
-    Parameters:
-    -x: Treeshap R square
-    -max_comp: maximum number of components in the plot
-    
-    Return:
-    An elbow plot and the top indices in x that have the highest variance explained
-    """
-    # Ensure max_comp is not greater than the length of x
-    max_comp = int(min(max_comp, len(x)))
-    
-    # Get indices of the sorted variances in descending order
-    indices_sorted_variances = np.argsort(x)[::-1]
-    
-    # Select the indices corresponding to the highest "max_comp" variances
-    selected_indices = indices_sorted_variances[:max_comp]
-    
-    # Calculate cumulative explained variance for the selected components
-    sorted_variances = x[selected_indices]
-    #cumulative_explained_variance = np.cumsum(sorted_variances / np.sum(x))
-    
-    
-    plt.plot(range(1, max_comp + 1), sorted_variances, marker=marker, linestyle=linestyle)
-    plt.title(title)
-    plt.xlabel('Feature indices')
-    plt.ylabel('Explained Variance')
-    
-    # Setting integer ticks on the x-axis
-    plt.xticks(range(1, max_comp + 1), selected_indices)
-    plt.show()
-    
-    return selected_indices
-
-
-# Call the elbow_plot_indices function
-#indices_for_max_comp = vis_elbow(rsq_res, max_comp = 15)
-#indices_for_max_comp

@@ -1,5 +1,5 @@
-from treeshap_rsq.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter
-from treeshap_rsq.treeshap_rsq import loss_treeshap
+from qshap.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter
+from qshap.qshap import loss_treeshap
 from types import SimpleNamespace
 
 import sklearn

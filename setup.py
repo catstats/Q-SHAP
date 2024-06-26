@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='treeshap_rsq',
+    name='qshap',
     version='0.1.0',
-    description='Exact computation of treeshap R square in polynomial time',
+    description='Exact computation of shapley R-squared in polynomial time',
     long_description=open('README.md').read(),
     author='Zhongli Jiang',
     author_email='jiang548@purdue.edu',
