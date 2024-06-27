@@ -1,4 +1,4 @@
-This package is used to compute the shapley R square value for tree ensembles in polynomial time.
+This package is used to compute the Shapley R square value for tree ensembles in polynomial time.
 
 Please check "Q-SHAP Tutorial.ipynb" for usage.
 
