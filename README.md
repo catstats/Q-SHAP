@@ -3,7 +3,7 @@ This package is used to compute the Shapley R squared value for tree ensembles i
 
 Please check **Q-SHAP Tutorial.ipynb** for more usage.
 
-### Cite
+### Citation
 ```bibtex
 @article{jiang2024feature,
   title={Feature-Specific Coefficients of Determination in Tree Ensembles},
@@ -14,7 +14,7 @@ Please check **Q-SHAP Tutorial.ipynb** for more usage.
 ```
 
 
-### Reference
+### References
 - Jiang, Z., Zhang, D., & Zhang, M. (2024). Feature-Specific Coefficients of Determination in Tree Ensembles. arXiv preprint arXiv:2407.03515.
 - Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature machine intelligence 2.1 (2020): 56-67.
 - Karczmarz, Adam, et al. "Improved feature importance computation for tree models based on the Banzhaf value." Uncertainty in Artificial Intelligence. PMLR, 2022.
