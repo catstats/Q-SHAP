@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 ## Q-SHAP: Shapley R-Squared Value for Tree Ensembles
 This package is used to compute the Shapley R squared value for tree ensembles in polynomial time.
-=======
-This package is used to compute the Shapley R square value for tree ensembles in polynomial time.
->>>>>>> 1229d80df067f99375cf7b3bbe632fb29e5f315f
 
 Please check **Q-SHAP Tutorial.ipynb** for more usage.
 
