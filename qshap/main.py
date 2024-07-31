@@ -13,7 +13,7 @@ import os
 import json
 import uuid
 
-class explainer:
+class gazer:
     def __init__(self, model):
         self.model = model
         implemented_model = (sklearn.tree.DecisionTreeRegressor,
@@ -121,17 +121,26 @@ class explainer:
     
 
 
-    def rsq(self, x, y, loss_out=False, ncore=1):
+    def rsq(self, x, y, loss_out=False, ncore=1, nfrac=None):
         """
         Parameters
         -x: the original x
         -y: the original y
         -loss_out: output loss or not
+        -nfrac: fraction of samples to sample from, by default use all samples
         -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
 
         Return
         Shapley R-squared
-        """
+        """ 
+        if nfrac is not None:
+            if nfrac <= 0 or nfrac >= 1:
+                raise ValueError("Sample fraction (nfrac) must be between (0, 1), use none for no sampling.")
+            sample_size = int(len(x) * nfrac)
+            sample_ind = np.random.choice(len(x), sample_size, replace=False)
+            x = x[sample_ind]
+            y = y[sample_ind]
+                  
         max_core = os.cpu_count()
         if ncore == -1:
             ncore = os.cpu_count()
@@ -162,4 +171,19 @@ class explainer:
             return SimpleNamespace(rsq=rsq, loss=loss)
         else:
             return rsq
+        
+
+    def gcorr(rsq_res):
+        """
+        Parameters
+        -rsq_res: the rsq result from calling gazer.rsq
+
+        Return
+        Generalized correlation (Square root of Shapley R-squared)
+        """
+        res = np.sqrt(rsq_res)
+        return rsq_res
+
+
+
         

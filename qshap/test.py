@@ -1,4 +1,4 @@
-from qshap import explainer
+from qshap import gazer
 import sklearn.ensemble
 import numpy as np
 import time as time
@@ -28,8 +28,8 @@ tree_regressor = DecisionTreeRegressor(max_depth=max_depth)
 tree_fit = tree_regressor.fit(x, y)
 
 start = time.time()
-explainer_rsq = explainer(tree_regressor)
-rsq_res = explainer.rsq(explainer_rsq, x, y)
+gazer_rsq = gazer(tree_regressor)
+rsq_res = gazer.rsq(gazer_rsq, x, y)
 end = time.time()
 print("time: " + str(end - start))
 
@@ -52,8 +52,8 @@ tree_fit = tree_regressor.fit(x, y)
 
 # start to explain 
 start = time.time()
-explainer_rsq = explainer(tree_regressor)
-rsq_res = explainer.rsq(explainer_rsq, x, y)
+gazer_rsq = gazer(tree_regressor)
+rsq_res = gazer.rsq(gazer_rsq, x, y)
 end = time.time()
 print("time: " + str(end - start))
 
@@ -68,7 +68,7 @@ print("Model R^2 is: " + str(model_rsq) + "\n")
 
 # scikit learn xgboost example. The usage is the same again.
 # model fitting
-max_depth = 2
+max_depth = 4
 n_estimators = 50
 tree_regressor = xgboost.XGBRegressor(n_estimators=n_estimators, max_depth=max_depth)
 tree_regressor.fit(x, y)
@@ -76,8 +76,8 @@ tree_regressor.fit(x, y)
 
 # start to explain 
 start = time.time()
-explainer_rsq = explainer(tree_regressor)
-rsq_res = explainer.rsq(explainer_rsq, x, y)
+gazer_rsq = gazer(tree_regressor)
+rsq_res = gazer.rsq(gazer_rsq, x, y)
 end = time.time()
 print("time: " + str(end - start))
 
@@ -90,50 +90,76 @@ model_rsq = 1 - sse/sst
 print("Treeshap R^2 sum is: " + str(np.sum(rsq_res)))
 print("Model R^2 is: " + str(model_rsq) + "\n")
 
+# if you would like to use sampling
+start = time.time()
+gazer_rsq = gazer(tree_regressor)
+rsq_res_frac = gazer.rsq(gazer_rsq, x, y, nfrac=0.5)
+end = time.time()
+print("time: " + str(end - start))
+
+# Let's check the real R^2
+ypred = tree_regressor.predict(x)
+sst = np.sum((y - np.mean(y)) ** 2)
+sse = np.sum((y - ypred) ** 2)
+model_rsq = 1 - sse/sst
+
+print("Treeshap R^2 sum is: " + str(np.sum(rsq_res_frac)))
+print("Model R^2 is: " + str(model_rsq) + "\n")
+
+
+# output generalized correlation (Square root of Shapley R squared)
+gcorr_res = gazer.gcorr(rsq_res)
 
 # extract loss example 
 
 # Or simply output both 
-rsq_res2 = explainer.rsq(explainer_rsq, x, y, loss_out=True)
+rsq_res2 = gazer.rsq(gazer_rsq, x, y, loss_out=True)
 rsq_res2.rsq
 rsq_res2.loss
 
 # You can extract loss only by, it decompose the loss for each sample
 # But directly calling loss doesn't support parallel computing yet
-loss_res = explainer.loss(explainer_rsq, x, y)
+loss_res = gazer.loss(gazer_rsq, x, y)
 
 # Interstingly, you can calculate loss decomposition for arbitrarily sample (which doesn't make sense for R^2)
 # This will be particular fast if you only want to several samples among a large dataset
 # All you have to do is add the original mean of y
-loss_sample1 = explainer.loss(explainer_rsq, x[0:1, :], y[0], y_mean_ori=np.mean(y))
-loss_multiple = explainer.loss(explainer_rsq, x[0:99], y[0:99], y_mean_ori=np.mean(y))
+loss_sample1 = gazer.loss(gazer_rsq, x[0:1, :], y[0], y_mean_ori=np.mean(y))
+loss_multiple = gazer.loss(gazer_rsq, x[0:99], y[0:99], y_mean_ori=np.mean(y))
 # Check if the result match
 #print(np.sum(np.abs(loss_res[0] - loss_sample1)))
 #print(np.sum(np.abs(loss_res[0:99] - loss_multiple)))
 
 # Visualize rsq 
 # First we can import the module
-from qshap import vis_rsq, vis_loss, vis_elbow
+from qshap import vis
 
 # # Generate feature names using list comprehension and format them
 feature_names = np.array([f"feature{i}" for i in range(1, rsq_res.shape[0]+1)])
 
 # # Give it a name and rotate
-vis_rsq(rsq_res, color_map_name="Pastel2", label=feature_names, rotation=45)
+vis.rsq(rsq_res, color_map_name="Pastel2", label=feature_names, rotation=45)
 
 # default
-vis_rsq(rsq_res)
+vis.rsq(rsq_res)
+
+# plot up to a certain cutoff
+vis.rsq(rsq_res, cutoff=0.1, model_rsq=False)
+
 # change color 
-vis_rsq(rsq_res, color_map_name="Pastel2")
+vis.rsq(rsq_res, color_map_name="Pastel2")
 # Give a horizontal plot, hide model rsq, change the number of features to show, and you can always save it
-vis_rsq(rsq_res, color_map_name="PuBu", horizontal=True, model_rsq=False, max_feature=15, save_name="rsq_eg")
+vis.rsq(rsq_res, color_map_name="PuBu", horizontal=True, model_rsq=False, max_feature=15, save_name="rsq_eg")
 
 # Elbow plot 
-vis_elbow(rsq_res, max_comp=15)
+vis.elbow(rsq_res, max_comp=15)
 
 # Vidualize individual loss
 # The interactive effect works with jupyter notebook
-vis_loss(loss_res)
+vis.loss(loss_res)
 
 # Find a lovely plot for one sample and save it, say for the 10-th sample
-vis_loss(loss_res, save_ind=10)
+vis.loss(loss_res, save_ind=10)
+
+# Visualize generalized rsq
+vis.gcorr(rsq_res)
