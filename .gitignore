@@ -4,3 +4,4 @@ build
 *.egg-info/
 *_checkpoints
 *.pdf
+.ipynb_checkpoints/

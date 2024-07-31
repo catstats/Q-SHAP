@@ -68,7 +68,7 @@ print("Model R^2 is: " + str(model_rsq) + "\n")
 
 # scikit learn xgboost example. The usage is the same again.
 # model fitting
-max_depth = 4
+max_depth = 2
 n_estimators = 50
 tree_regressor = xgboost.XGBRegressor(n_estimators=n_estimators, max_depth=max_depth)
 tree_regressor.fit(x, y)
