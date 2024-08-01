@@ -1,5 +1,5 @@
-## Q-SHAP: Shapley $R^2$ Value for Tree Ensembles
-This package is used to compute the Shapley $R^2$ value for tree ensembles in polynomial time.
+## Q-SHAP: Feature-Specific $R^2$ Values for Tree Ensembles
+This package is used to compute feature-specifc $R^2$ values, following Shapley decomposition of the total $R^2$, for tree ensembles in polynomial time.
 
 Please check **Q-SHAP Tutorial.ipynb** for more usage.
 
