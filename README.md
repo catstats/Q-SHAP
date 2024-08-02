@@ -21,3 +21,10 @@ This version only takes output from **XGBoost**, **scikit-learn Decision Tree**,
 - Bifet, Albert, Jesse Read, and Chao Xu. "Linear tree shap." Advances in Neural Information Processing Systems 35 (2022): 25818-25828.
 - Chen, Tianqi, and Carlos Guestrin. "Xgboost: A scalable tree boosting system." Proceedings of the 22nd acm sigkdd international conference on knowledge discovery and data mining. 2016.
 
+
+
+### Task List
+
+- [ ] Task 1: Completed task
+- [ ] Task 2: Task in progress
+- [ ] Task 3: Pending task
