@@ -32,5 +32,8 @@ This version only takes output from **XGBoost**, **scikit-learn Decision Tree**,
 ### Container images
 We provide pre-built images with all necessary packages for Q-SHAP in Python 3.11, available for both Docker and Singularity:
 
-Docker
-Singularity
+- **Docker:**  
+  You can pull the Docker image using the following command:
+  ```sh
+  docker pull catstat/xai
+  ```
