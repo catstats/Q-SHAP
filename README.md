@@ -25,6 +25,6 @@ This version only takes output from **XGBoost**, **scikit-learn Decision Tree**,
 
 ### Task List
 
-- [ ] Task 1: Completed task
-- [ ] Task 2: Task in progress
-- [ ] Task 3: Pending task
+- [ ] Task 1: Lightgbm version
+- [ ] Task 2: Catboos version
+- [ ] Task 3: BART version
