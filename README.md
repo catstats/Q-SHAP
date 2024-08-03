@@ -23,12 +23,6 @@ This version only takes output from **XGBoost**, **scikit-learn Decision Tree**,
 
 
 
-### Task List
-
-- [ ] Task 1: Lightgbm version
-- [ ] Task 2: Catboost version
-- [ ] Task 3: BART version
-
 ### Container images
 We provide pre-built images with all necessary packages for Q-SHAP in Python 3.11, available for both Docker and Singularity:
 
@@ -42,5 +36,12 @@ We provide pre-built images with all necessary packages for Q-SHAP in Python 3.1
   ```sh
   singularity pull docker://catstat/xai:0.0
   ```
+
+
+  ### Task List
+
+- [ ] Task 1: Lightgbm version
+- [ ] Task 2: Catboost version
+- [ ] Task 3: BART version
   
 
