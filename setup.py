@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='qshap',
     version='0.1.0',
-    description='Exact computation of shapley R-squared in polynomial time',
+    description='Exact computation of Shapley R-squared in polynomial time',
     long_description=open('README.md').read(),
     author='Zhongli Jiang, Dabao Zhang', 
     author_email='jiang548@purdue.edu, zdb969@hs.uci.edu',
@@ -22,6 +22,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     python_requires='>=3.7', 
     zip_safe=False
