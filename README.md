@@ -3,7 +3,7 @@ This package is used to compute feature-specific $R^2$ values, following Shapley
 
 This version only takes output from **XGBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT**. We are working to update it for random forest in the next version. Please check **Q-SHAP Tutorial.ipynb** for more usage.
 
-### Citation
+## Citation
 ```bibtex
 @article{jiang2024feature,
   title={Feature-Specific Coefficients of Determination in Tree Ensembles},
@@ -14,7 +14,7 @@ This version only takes output from **XGBoost**, **scikit-learn Decision Tree**,
 ```
 
 
-### References
+## References
 - Jiang, Z., Zhang, D., & Zhang, M. (2024). Feature-Specific Coefficients of Determination in Tree Ensembles. arXiv preprint arXiv:2407.03515.
 - Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature machine intelligence 2.1 (2020): 56-67.
 - Karczmarz, Adam, et al. "Improved feature importance computation for tree models based on the Banzhaf value." Uncertainty in Artificial Intelligence. PMLR, 2022.
@@ -23,7 +23,7 @@ This version only takes output from **XGBoost**, **scikit-learn Decision Tree**,
 
 
 
-### Container images
+## Container images
 We provide pre-built images with all necessary packages for Q-SHAP in Python 3.11, available for both Docker and Singularity:
 
 - **Docker:**  
@@ -38,7 +38,7 @@ We provide pre-built images with all necessary packages for Q-SHAP in Python 3.1
   ```
 
 
-### Task List
+## Task List
 
 - [ ] Task 1: Lightgbm version
 - [ ] Task 2: Catboost version
