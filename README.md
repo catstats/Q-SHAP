@@ -24,8 +24,10 @@ gazer_rsq = gazer(model)
 rsq_res = gazer.rsq(gazer_rsq, x, y)
 
 # Visualize
-vis.rsq(rsq_res, label = np.array(feature_names), rotation = 30)
+vis.rsq(rsq_res, label = np.array(feature_names), rotation = 30, save_name = "cal_housing")
 ```
+
+[Download the report](cal_housing.pdf)
 
 ## Citation
 
