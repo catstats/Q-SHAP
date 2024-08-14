@@ -7,6 +7,7 @@ This version only takes outputs from **XGBoost**, **scikit-learn Decision Tree**
 ## Quick Start
 
 ```
+# Import necessary libraries
 from sklearn.datasets import fetch_california_housing
 from qshap import gazer, vis
 import xgboost as xgb
@@ -19,11 +20,11 @@ model = xgb.XGBRegressor(max_depth=2, n_estimators=100, random_state=42)
 
 model.fit(x, y)
 
-# Explain using qshap
+# Obtain feature-specific R^2 using qshap
 gazer_rsq = gazer(model)
 phi_rsq = gazer.rsq(gazer_rsq, x, y)
 
-# Visualize 
+# Visualize top values of feature-specific R^2
 vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing")
 ```
 
@@ -42,15 +43,15 @@ vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_hous
 
 ## References
 
-- Jiang, Z., Zhang, D., & Zhang, M. (2024). Feature-Specific Coefficients of Determination in Tree Ensembles. arXiv preprint arXiv:2407.03515.
-- Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature machine intelligence 2.1 (2020): 56-67.
+- Jiang, Z., Zhang, D., & Zhang, M. (2024). "Feature-specific coefficients of determination in tree ensembles." arXiv preprint arXiv:2407.03515.
+- Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature Machine Intelligence 2.1 (2020): 56-67.
 - Karczmarz, Adam, et al. "Improved feature importance computation for tree models based on the Banzhaf value." Uncertainty in Artificial Intelligence. PMLR, 2022.
 - Bifet, Albert, Jesse Read, and Chao Xu. "Linear tree shap." Advances in Neural Information Processing Systems 35 (2022): 25818-25828.
-- Chen, Tianqi, and Carlos Guestrin. "Xgboost: A scalable tree boosting system." Proceedings of the 22nd acm sigkdd international conference on knowledge discovery and data mining. 2016.
+- Chen, Tianqi, and Carlos Guestrin. "Xgboost: A scalable tree boosting system." Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. 2016.
 
 ## Container Images
 
-We provide pre-built images with all necessary packages for Q-SHAP in Python 3.11, available for both Docker and Singularity:
+We provide pre-built images, available for both Docker and Singularity, with all necessary packages for Q-SHAP in Python 3.11:
 
 - **Docker:**  
   You can pull the Docker image using the following command:
