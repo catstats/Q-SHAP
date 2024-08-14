@@ -4,7 +4,7 @@ This package is used to compute feature-specific $R^2$ values, following Shapley
 
 This version only takes outputs from **XGBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT**. We are working to update it for random forests in the next version. Please check **Q-SHAP Tutorial.ipynb** for more details using Q-SHAP.
 
-## Quick start
+## Quick Start
 
 ```
 from sklearn.datasets import fetch_california_housing
@@ -21,10 +21,10 @@ model.fit(x, y)
 
 # Explain using qshap
 gazer_rsq = gazer(model)
-rsq_res = gazer.rsq(gazer_rsq, x, y)
+phi_rsq = gazer.rsq(gazer_rsq, x, y)
 
-# Visualize
-vis.rsq(rsq_res, label = np.array(feature_names), rotation = 30, save_name = "cal_housing")
+# Visualize 
+vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing")
 ```
 
 [Download the report](cal_housing.pdf)
@@ -48,7 +48,7 @@ vis.rsq(rsq_res, label = np.array(feature_names), rotation = 30, save_name = "ca
 - Bifet, Albert, Jesse Read, and Chao Xu. "Linear tree shap." Advances in Neural Information Processing Systems 35 (2022): 25818-25828.
 - Chen, Tianqi, and Carlos Guestrin. "Xgboost: A scalable tree boosting system." Proceedings of the 22nd acm sigkdd international conference on knowledge discovery and data mining. 2016.
 
-## Container images
+## Container Images
 
 We provide pre-built images with all necessary packages for Q-SHAP in Python 3.11, available for both Docker and Singularity:
 
