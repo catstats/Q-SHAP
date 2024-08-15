@@ -38,7 +38,7 @@ vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_hous
 ```
 
 <p align="center">
-  <img src="./figs/cal_housing.png" />
+  <img width="500" src="./figs/cal_housing.png" />
 </p>
 
 ## Citation
