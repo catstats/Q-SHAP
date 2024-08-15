@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='qshap',
-    version='0.1.0',
+    version='0.2.0',
     description='Exact computation of Shapley R-squared in polynomial time',
     long_description=open('README.md').read(),
     author='Zhongli Jiang, Dabao Zhang', 
