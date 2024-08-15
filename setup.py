@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='qshap',
-    version='0.3.0',
+    version='0.3.1',
     description='Exact computation of Shapley R-squared in polynomial time',
     long_description=open('README.md').read(),    
     long_description_content_type='text/markdown',  # Specify that the long_description is in Markdown

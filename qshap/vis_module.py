@@ -142,7 +142,7 @@ class vis:
     # vis.rsq(rsq_res, color_map_name="PuBu", horizontal=True, model_rsq=False, max_feature=15, save_name="rsq_eg")
     
     @staticmethod
-    def loss(loss, save_ind=None, save_prefix="SHAP loss sample", title="SHAP Loss", color_map_name="Blues", model_rsq=False, decimal=0, xtitle="Feature Index", ytitle="Loss"):
+    def loss(loss, save_ind=None, save_prefix="Shapley loss sample", title="Shapley Loss: Sample", color_map_name="Blues", model_rsq=False, decimal=0, xtitle="Feature Index", ytitle="Loss"):
         """
         Visualize the loss function for each sample
         
@@ -155,7 +155,7 @@ class vis:
         def sample_loss(i):
             plt.cla()  # Clear the current axes
             if 0 <= i < loss.shape[0]:  # Check if i is within the valid range
-                vis.rsq(loss[i], title=title, color_map_name=color_map_name, model_rsq=model_rsq, decimal=decimal, xtitle=xtitle, ytitle=ytitle)
+                vis.rsq(loss[i], title=title + " " + str(i), color_map_name=color_map_name, model_rsq=model_rsq, decimal=decimal, xtitle=xtitle, ytitle=ytitle)
         
         # # Slider for quick navigation
         # i_slider = widgets.IntSlider(
@@ -191,7 +191,7 @@ class vis:
 
         if save_ind is not None:
             save_name = save_prefix + " " + str(save_ind)
-            vis.rsq(loss[save_ind], title=title, color_map_name=color_map_name, model_rsq=model_rsq, decimal=decimal, xtitle=xtitle, ytitle=ytitle, 
+            vis.rsq(loss[save_ind], title=title + " " + str(save_ind), color_map_name=color_map_name, model_rsq=model_rsq, decimal=decimal, xtitle=xtitle, ytitle=ytitle, 
                 save_name=save_name)
         else:
             display(ui, out)
@@ -246,7 +246,7 @@ class vis:
          #indices_for_max_comp
     
     @staticmethod
-    def gcorr(x, color_map_name="Blues", horizontal=False, max_feature=10, cutoff=0, title="Genalized Shapley Correlation", xtitle="Feature index", ytitle="Generalized Correlation", rotation=0, label=None, decimal=3, save_name=None):
+    def gcorr(x, color_map_name="Blues", horizontal=False, max_feature=10, cutoff=0, title="Generalized Correlation of Features to the Outcome", xtitle="Feature index", ytitle="Generalized Correlation", rotation=0, label=None, decimal=3, save_name=None):
         """
         Visualize Generalized Shapley correlation
         
