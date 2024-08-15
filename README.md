@@ -16,13 +16,13 @@ import numpy as np
 # Load the California Housing dataset and fit a XGBoost regressor
 housing = fetch_california_housing()
 x, y, feature_names = housing.data, housing.target, housing.feature_names
-model = xgb.XGBRegressor(max_depth=2, n_estimators=100, random_state=42)
+model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42)
 
 model.fit(x, y)
 
-# Obtain feature-specific R^2 using qshap
+# Obtain feature-specific R^2 using qshap, explain using 10% of the data (around 2000)
 gazer_rsq = gazer(model)
-phi_rsq = gazer.rsq(gazer_rsq, x, y)
+phi_rsq = gazer.rsq(gazer_rsq, x, y, nfrac=0.1, random_state=42)
 
 # Visualize top values of feature-specific R^2
 vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing")

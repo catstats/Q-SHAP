@@ -45,7 +45,7 @@ print("Model R^2 is: " + str(model_rsq) + "\n")
 
 # scikit learn gbdt example. The usage is the same.
 # model fitting
-max_depth = 2
+max_depth = 4
 n_estimators = 50
 tree_regressor = GradientBoostingRegressor(n_estimators=n_estimators, max_depth=max_depth)
 tree_fit = tree_regressor.fit(x, y)
@@ -89,6 +89,8 @@ model_rsq = 1 - sse/sst
 
 print("Treeshap R^2 sum is: " + str(np.sum(rsq_res)))
 print("Model R^2 is: " + str(model_rsq) + "\n")
+
+np.sum(gazer_rsq.explainer.shap_values(x)*y[:, np.newaxis]/sst, axis=0)
 
 # if you would like to use sampling
 start = time.time()
