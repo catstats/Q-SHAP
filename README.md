@@ -34,7 +34,7 @@ gazer_rsq = gazer(model)
 phi_rsq = gazer.rsq(gazer_rsq, x, y, nfrac = 0.05, random_state=42)
 
 # Visualize top values of feature-specific R^2
-vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing")
+vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing", color_map_name="Pastel2")
 ```
 
 <p align="center">
