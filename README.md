@@ -11,13 +11,13 @@ This version only takes outputs from **XGBoost**, **scikit-learn Decision Tree**
 
 `qshap` can be installed through PyPI:
 
-```
+<pre>
 pip install qshap
-```
+</pre>
 
 ## Quick Start
 
-```
+```python
 # Import necessary libraries
 from sklearn.datasets import fetch_california_housing
 from qshap import gazer, vis
