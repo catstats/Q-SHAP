@@ -3,6 +3,7 @@ from qshap.qshap import loss_treeshap
 
 from types import SimpleNamespace
 from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
 
 import sklearn
 import numpy as np
@@ -53,12 +54,13 @@ class gazer:
             raise NotImplementedError(f"Model not supported yet. Supported models are: {supported_models_str}")
         
 
-    def loss(self, x, y, y_mean_ori=None):
+    def loss(self, x, y, y_mean_ori=None, progress_bar=True):
         """
         Parameters
         -x: x
         -y: y
         -y_mean_ori: mean of the original
+        -progress_bar: whether show the progress bar or not
         """
         max_depth = self.max_depth
         model = self.model
@@ -83,7 +85,9 @@ class gazer:
         
             loss = np.zeros_like(x, dtype=np.float64)
             
-            for i in range(num_tree):
+            iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
+
+            for i in iterator:
                 if i==0:
                     res = y - y_mean_ori
                 else:
@@ -103,8 +107,10 @@ class gazer:
             warnings.filterwarnings("ignore", module="xgb")
 
             loss = np.zeros_like(x, dtype=np.float64)
+            
+            iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
 
-            for i in range(num_tree):
+            for i in iterator:
                 # get summary_tree first 
                 if i==0:
                     res = y - self.base_score
@@ -121,7 +127,7 @@ class gazer:
     
 
 
-    def rsq(self, x, y, loss_out=False, ncore=1, nfrac=None):
+    def rsq(self, x, y, loss_out=False, ncore=1, nfrac=None, random_state=42, progress_bar=True):
         """
         Parameters
         -x: the original x
@@ -129,6 +135,8 @@ class gazer:
         -loss_out: output loss or not
         -nfrac: fraction of samples to sample from, by default use all samples
         -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
+        -random_state: control random seed for numpy
+        -progress_bar: whether show the progress bar or not
 
         Return
         Shapley R-squared
@@ -136,6 +144,7 @@ class gazer:
         if nfrac is not None:
             if nfrac <= 0 or nfrac >= 1:
                 raise ValueError("Sample fraction (nfrac) must be between (0, 1), use none for no sampling.")
+            np.random.seed(random_state)
             sample_size = int(len(x) * nfrac)
             sample_ind = np.random.choice(len(x), sample_size, replace=False)
             x = x[sample_ind]
@@ -151,17 +160,20 @@ class gazer:
         sst = np.sum((y - y_mean_ori) ** 2)
         
         if ncore==1:
-            loss = self.loss(x, y, y_mean_ori=y_mean_ori)
+            loss = self.loss(x, y, y_mean_ori=y_mean_ori, progress_bar=progress_bar)
         else:
             x_chunks = divide_chunks(x, ncore)
             y_chunks = divide_chunks(y, ncore)
 
             with ProcessPoolExecutor(max_workers=ncore) as executor:
                 # Submit all chunks for processing
-                futures = [executor.submit(self.loss, x_chunks[i], y_chunks[i], y_mean_ori) for i in range(ncore)]
+                futures = [executor.submit(self.loss, x_chunks[i], y_chunks[i], y_mean_ori, False) for i in range(ncore)]
+
+                # Assign progress bar to a variable
+                iterator = tqdm(futures, desc="Processing", total=len(futures)) if progress_bar else futures
 
                 # Wait for all futures to complete and collect results
-                results = [future.result() for future in futures]
+                results = [future.result() for future in iterator]
             
             loss = np.concatenate(results) 
 
