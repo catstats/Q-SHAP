@@ -45,10 +45,10 @@ vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_hous
 
 ```bibtex
 @article{jiang2024feature,
-  title={Feature-Specific Coefficients of Determination in Tree Ensembles},
-  author={Jiang, Zhongli and Zhang, Dabao and Zhang, Min},
-  journal={arXiv preprint arXiv:2407.03515},
-  year={2024}
+title={Feature-Specific Coefficients of Determination in Tree Ensembles},
+author={Jiang, Zhongli and Zhang, Dabao and Zhang, Min},
+journal={arXiv preprint arXiv:2407.03515},
+year={2024}
 }
 ```
 
