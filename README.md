@@ -1,8 +1,19 @@
 # Q-SHAP: Feature-Specific $R^2$ Values for Tree Ensembles
 
+[![PyPI](https://img.shields.io/pypi/v/qshap)](https://pypi.org/project/qshap/)
+![Downloads](https://img.shields.io/pypi/dm/qshap)
+
 This package is used to compute feature-specific $R^2$ values, following Shapley decomposition of the total $R^2$, for tree ensembles in polynomial time based on the [paper](https://arxiv.org/abs/2407.03515).
 
 This version only takes outputs from **XGBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT**. We are working to update it for random forests in the next version. Please check **Q-SHAP Tutorial.ipynb** for more details using Q-SHAP.
+
+## Installation
+
+`qshap` can be installed through PyPI:
+
+```
+pip install qshap
+```
 
 ## Quick Start
 
@@ -16,19 +27,19 @@ import numpy as np
 # Load the California Housing dataset and fit a XGBoost regressor
 housing = fetch_california_housing()
 x, y, feature_names = housing.data, housing.target, housing.feature_names
-model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42)
+model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42).fit(x, y)
 
-model.fit(x, y)
-
-# Obtain feature-specific R^2 using qshap, explain using 10% of the data (around 2000)
+# Obtain feature-specific R^2 using qshap, using 5% of the data (around 1000)
 gazer_rsq = gazer(model)
-phi_rsq = gazer.rsq(gazer_rsq, x, y, nfrac=0.1, random_state=42)
+phi_rsq = gazer.rsq(gazer_rsq, x, y, nfrac = 0.05, random_state=42)
 
 # Visualize top values of feature-specific R^2
 vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing")
 ```
 
-[Download the report](cal_housing.pdf)
+<p align="center">
+  <img src="./cal_housing.png" />
+</p>
 
 ## Citation
 
