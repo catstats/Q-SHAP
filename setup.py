@@ -5,6 +5,7 @@ setup(
     version='0.2.0',
     description='Exact computation of Shapley R-squared in polynomial time',
     long_description=open('README.md').read(),    
+    long_description_content_type='text/markdown',  # Specify that the long_description is in Markdown
     author='Zhongli Jiang, Dabao Zhang', 
     author_email='jiang548@purdue.edu, zdb969@hs.uci.edu',
     license="GPL-2.0",
