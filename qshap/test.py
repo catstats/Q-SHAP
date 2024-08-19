@@ -45,7 +45,7 @@ print("Model R^2 is: " + str(model_rsq) + "\n")
 
 # scikit learn gbdt example. The usage is the same.
 # model fitting
-max_depth = 4
+max_depth = 2
 n_estimators = 50
 tree_regressor = GradientBoostingRegressor(n_estimators=n_estimators, max_depth=max_depth)
 tree_fit = tree_regressor.fit(x, y)
