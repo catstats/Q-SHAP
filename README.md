@@ -1,7 +1,7 @@
 # Q-SHAP: Feature-Specific $R^2$ Values for Tree Ensembles
 
 [![PyPI](https://img.shields.io/pypi/v/qshap)](https://pypi.org/project/qshap/)
-![Downloads](https://img.shields.io/pypi/dm/qshap)
+[![Downloads](https://static.pepy.tech/badge/qshap)](https://pepy.tech/project/qshap)
 
 This package is used to compute feature-specific $R^2$ values, following Shapley decomposition of the total $R^2$, for tree ensembles in polynomial time based on the [paper](https://arxiv.org/abs/2407.03515).
 
