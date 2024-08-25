@@ -106,7 +106,7 @@ sst = np.sum((y - np.mean(y)) ** 2)
 sse = np.sum((y - ypred) ** 2)
 model_rsq = 1 - sse/sst
 
-print("Treeshap R^2 sum is: " + str(np.sum(rsq_res_frac)))
+print("Treeshap R^2 sum is: " + str(np.sum(rsq_res_sample)))
 print("Model R^2 is: " + str(model_rsq) + "\n")
 
 
