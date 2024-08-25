@@ -127,13 +127,14 @@ class gazer:
     
 
 
-    def rsq(self, x, y, loss_out=False, ncore=1, nfrac=None, random_state=42, progress_bar=True):
+    def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None, random_state=42, progress_bar=True):
         """
         Parameters
         -x: the original x
         -y: the original y
         -loss_out: output loss or not
-        -nfrac: fraction of samples to sample from, by default use all samples
+        -nsample: number of samples to sample from, by default use all samples
+        -nfrac: fraction of samples to sample from, by default 1, use all samples
         -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
         -random_state: control random seed for numpy
         -progress_bar: whether show the progress bar or not
@@ -141,12 +142,22 @@ class gazer:
         Return
         Shapley R-squared
         """ 
-        if nfrac is not None:
-            if nfrac <= 0 or nfrac >= 1:
-                raise ValueError("Sample fraction (nfrac) must be between (0, 1), use none for no sampling.")
+
+        
+        if nsample is not None:
+            if nsample <=0 or nsample >= x.shape[0]:
+                raise ValueError("Samping sample size (nsample) must be larger than 0 and smaller than the total number of samples, use None for no sampling.")
             np.random.seed(random_state)
-            sample_size = int(len(x) * nfrac)
-            sample_ind = np.random.choice(len(x), sample_size, replace=False)
+            sample_ind = np.random.choice(len(x), nsample, replace=False)
+            x = x[sample_ind]
+            y = y[sample_ind]
+   
+        if nfrac is not None and nsample is None:
+            if nfrac <= 0 or nfrac >= 1:
+                raise ValueError("Sample fraction (nfrac) must be between (0, 1), use None for no sampling.")
+            np.random.seed(random_state)
+            nsample = int(len(x) * nfrac)
+            sample_ind = np.random.choice(len(x), nsample, replace=False)
             x = x[sample_ind]
             y = y[sample_ind]
                   
