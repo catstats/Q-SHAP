@@ -29,7 +29,7 @@ housing = fetch_california_housing()
 x, y, feature_names = housing.data, housing.target, housing.feature_names
 model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42).fit(x, y)
 
-# Obtain feature-specific R^2 using qshap, using 5% of the data (around 1000)
+# Obtain feature-specific R^2 using qshap, use 1024 randomly sampled data
 gazer_rsq = gazer(model)
 phi_rsq = gazer.rsq(gazer_rsq, x, y, nsample=1024, random_state=42)
 
