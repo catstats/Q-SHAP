@@ -95,7 +95,8 @@ np.sum(gazer_rsq.explainer.shap_values(x)*y[:, np.newaxis]/sst, axis=0)
 # if you would like to use sampling
 start = time.time()
 gazer_rsq = gazer(tree_regressor)
-rsq_res_frac = gazer.rsq(gazer_rsq, x, y, nfrac=0.5)
+rsq_res_sample = gazer.rsq(gazer_rsq, x, y, nsample=128)
+# rsq_res_frac = gazer.rsq(gazer_rsq, x, y, nfrac=0.5)
 end = time.time()
 print("time: " + str(end - start))
 

@@ -31,7 +31,7 @@ model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42).fit(x, y
 
 # Obtain feature-specific R^2 using qshap, using 5% of the data (around 1000)
 gazer_rsq = gazer(model)
-phi_rsq = gazer.rsq(gazer_rsq, x, y, nfrac = 0.05, random_state=42)
+phi_rsq = gazer.rsq(gazer_rsq, x, y, nsample=1024, random_state=42)
 
 # Visualize top values of feature-specific R^2
 vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing", color_map_name="Pastel2")
