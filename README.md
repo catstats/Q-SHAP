@@ -62,7 +62,7 @@ vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_hous
 
 ## Container Images
 
-We provide pre-built images, available for both Docker and Singularity, with all necessary packages for Q-SHAP in Python 3.11:
+We provide pre-built images, available for both Docker and Singularity, with all necessary packages for Q-SHAP in Python 3.12:
 
 - **Docker:**  
   You can pull the Docker image using the following command:
@@ -72,7 +72,7 @@ We provide pre-built images, available for both Docker and Singularity, with all
 - **Singularity:**  
   You can pull the Docker image using the following command:
   ```sh
-  singularity pull docker://catstat/xai:0.0
+  singularity pull docker://catstat/xai:0.1
   ```
 
 ## Task List
