@@ -13,6 +13,7 @@ setup(
     url="https://github.com/catstats/Q-SHAP",
     setup_requires=['numpy'],
     install_requires=['numpy', 'scikit-learn',  'shap', 'numba', 'ipywidgets', 'pandas', 'matplotlib'],
+    extras_require={'xgboost': ['xgboost'],'lightgbm': ['lightgbm']},
     classifiers=[
         'Operating System :: Microsoft :: Windows',
         'Operating System :: Unix',
