@@ -1,4 +1,4 @@
-from qshap.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter, divide_chunks
+from qshap.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter, lgb_formatter, lgb_shap, divide_chunks
 from qshap.qshap import loss_treeshap
 
 from types import SimpleNamespace
@@ -8,6 +8,7 @@ from tqdm import tqdm
 import sklearn
 import numpy as np
 import xgboost
+import lightgbm
 import shap
 import warnings
 import os
@@ -19,12 +20,15 @@ class gazer:
         self.model = model
         implemented_model = (sklearn.tree.DecisionTreeRegressor,
                                 sklearn.ensemble.GradientBoostingRegressor,
-                                xgboost.sklearn.XGBRegressor)
+                                xgboost.sklearn.XGBRegressor,
+                                lightgbm.sklearn.LGBMRegressor)
         
         if isinstance(model, implemented_model):
             self.explainer = shap.TreeExplainer(model)
             if isinstance(model, (sklearn.tree.DecisionTreeRegressor,sklearn.ensemble.GradientBoostingRegressor)):
                 self.max_depth = model.max_depth
+            elif isinstance(model, lightgbm.sklearn.LGBMRegressor):
+                self.max_depth = model.get_params()['max_depth']
             elif isinstance(model, xgboost.sklearn.XGBRegressor):
                 # set to default value 6 if max_depth not set by user 
                 max_depth_xgb = model.get_params().get("max_depth")
@@ -123,9 +127,31 @@ class gazer:
                 # learning rate is different
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1)
 
+        # LightGBM
+        elif isinstance(model, lightgbm.sklearn.LGBMRegressor):
+            lgb_res = lgb_formatter(model.booster_.trees_to_dataframe(), max_depth)
+            lgb_shap_res = lgb_shap(lgb_res)
+            num_tree = model.n_iter_
+
+            loss = np.zeros_like(x, dtype=np.float64)
+
+            iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
+
+            for i in iterator:
+                # get summary_tree first 
+                if i==0:
+                    res = y 
+                else:
+                    res = y - model.predict(x, num_iteration=i, raw_score=True)
+                
+                summary_tree = summarize_tree(lgb_res[i])
+                explainer = shap.TreeExplainer(lgb_shap_res[i])
+                
+                # learning rate is different
+                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1)
+
         return loss
     
-
 
     def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None, random_state=42, progress_bar=True):
         """
@@ -206,7 +232,3 @@ class gazer:
         """
         res = np.sqrt(rsq_res)
         return rsq_res
-
-
-
-        

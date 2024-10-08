@@ -193,7 +193,6 @@ def summarize_tree(tree):
     return tree_summary(tree.children_left, tree.children_right, tree.feature, feature_uniq, tree.threshold, tree.max_depth, sample_weight, init_prediction, tree.node_count)
 
 
-@njit
 def traversal_weight(x, v, w, children_left, children_right, feature, threshold, sample_weight, leaf_ind, w_res, w_ind, depth, met_feature):
     """
     Calculate the weight in the treeSHAP. 
@@ -315,6 +314,78 @@ def xgb_formatter(model_data, max_depth):
     return(xgb_tree)
 
 
+def lgb_formatter(model_data, max_depth):
+    """
+    This function takes the trees_to_dataframe() format of the LightGBM output and transform it to a list that treeshap rsq can understand
+    
+    Parameters:
+    model_data: the output of trees_to_dataframe() file
+    max_depth: the max tree depth
+    
+    Examples:
+    lgb_tree_res = lgb_formatter(model_data, max_depth)
+    """
+    ntree = model_data['tree_index'].iloc[-1] + 1
+
+    lgb_tree = []
+
+    for tree_id in range(ntree):
+        
+        tree = model_data[model_data['tree_index']==tree_id] 
+
+        node_mapping = {original: idx for idx, original in enumerate(tree['node_index'])}
+        node_mapping[None] = - 1
+
+        split_feature = np.array([int(f.replace("Column_", "")) if f is not None else -1 for f in tree['split_feature']])
+        
+        lgb_tree.append(simple_tree(np.array(tree['left_child'].map(node_mapping)),
+                                    np.array(tree['right_child'].map(node_mapping)), 
+                                    split_feature,
+                                    np.array(tree["threshold"]),
+                                    max_depth, 
+                                    np.array(tree["count"]), 
+                                    np.array(tree["value"]), 
+                                    int(tree.shape[0])))
+    return(lgb_tree)
+
+
+def lgb_shap(formatter):
+    """
+    transform the output from lgb_formatter() so that is necessary for Treeshap calculation
+    
+    Parameters:
+    -formater: output from lgb_formatter()
+
+    Return:
+    A new model Treeshap can call
+    """
+    num_tree = len(formatter)
+    lgb_shap = []
+    
+    for i in range(num_tree):
+        tree = formatter[i]
+        children_left = tree.children_left
+        children_right = tree.children_right
+        children_default = children_right.copy()  # because sklearn does not use missing values
+        features = tree.feature
+        thresholds = tree.threshold
+        values = tree.value.reshape(tree.value.shape[0], 1)
+        node_sample_weight = tree.n_node_samples
+    
+        tree_dict = {
+        "children_left": children_left,
+        "children_right": children_right,
+        "children_default": children_default,
+        "features": features,
+        "thresholds": thresholds,
+        "values": values,
+        "node_sample_weight": node_sample_weight,
+        }
+        model = {"trees": [tree_dict]}
+
+        lgb_shap.append(model)
+        
+    return(lgb_shap)
 
 # Define a function to divide the dataset into chunks
 def divide_chunks(data, n_chunks):

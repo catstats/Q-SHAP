@@ -7,6 +7,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import Binarizer
 import xgboost
+import lightgbm
 
 from sklearn.datasets import make_regression
 
@@ -91,6 +92,29 @@ print("Treeshap R^2 sum is: " + str(np.sum(rsq_res)))
 print("Model R^2 is: " + str(model_rsq) + "\n")
 
 np.sum(gazer_rsq.explainer.shap_values(x)*y[:, np.newaxis]/sst, axis=0)
+
+# scikit learn lightGBM example. The usage is the same again.
+# model fitting
+max_depth = 2
+n_estimators = 50
+tree_regressor = lightgbm.LGBMRegressor(n_estimators=n_estimators, max_depth=max_depth, verbose=-1)
+tree_regressor.fit(x, y)
+
+# start to explain 
+start = time.time()
+gazer_rsq = gazer(tree_regressor)
+rsq_res = gazer.rsq(gazer_rsq, x, y)
+end = time.time()
+print("time: " + str(end - start))
+
+# Let's check the real R^2
+ypred = tree_regressor.predict(x)
+sst = np.sum((y - np.mean(y)) ** 2)
+sse = np.sum((y - ypred) ** 2)
+model_rsq = 1 - sse/sst
+
+print("Treeshap R^2 sum is: " + str(np.sum(rsq_res)))
+print("Model R^2 is: " + str(model_rsq) + "\n")
 
 # if you would like to use sampling
 start = time.time()

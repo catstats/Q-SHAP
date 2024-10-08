@@ -5,7 +5,7 @@
 
 This package is used to compute feature-specific $R^2$ values, following Shapley decomposition of the total $R^2$, for tree ensembles in polynomial time based on the [paper](https://arxiv.org/abs/2407.03515).
 
-This version only takes outputs from **XGBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT**. We are working to update it for random forests in the next version. Please check **Q-SHAP Tutorial.ipynb** for more details using Q-SHAP.
+This version only takes outputs from **XGBoost**, **LightGBM**, **scikit-learn Decision Tree**, and **scikit-learn GBDT**. We are working to update it for random forests in the next version. Please check **Q-SHAP Tutorial.ipynb** for more details using Q-SHAP.
 
 ## Installation
 
@@ -77,5 +77,4 @@ We provide pre-built images, available for both Docker and Singularity, with all
 
 ## Task List
 
-- [ ] Task 1: Lightgbm version
-- [ ] Task 2: Catboost version
+- [ ] Task 1: Catboost version

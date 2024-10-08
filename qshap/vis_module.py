@@ -269,3 +269,18 @@ class vis:
 
 
 
+import subprocess
+
+# Run the Streamlit app using subprocess
+def run_streamlit_app():
+    try:
+        # Run the Streamlit app using the generated app.py
+        subprocess.run(["streamlit", "run", "qshap/vis_llm.py"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e}")
+    except FileNotFoundError:
+        print("Streamlit is not installed or app.py not found.")
+
+# Run the Streamlit app
+if __name__ == "__main__":
+    run_streamlit_app()  
