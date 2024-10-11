@@ -111,10 +111,10 @@ class simple_tree:
     dataclass for a simple tree, in the scikit learn format that is necessary for computation
     
     Data:
-    children_left: left children_index
-    children_right: right children_index
+    children_left: left children index
+    children_right: right children index
     feature: array of features splitted at each node
-    threshold: array of threshols for corresponding splitting features
+    threshold: array of thresholds for corresponding splitting features
     max_depth: max_depth of the tree
     n_node_samples: array of sample size for each node
     value: array of values for each node, only leaf value is used, so only keep leaf value is fine
