@@ -244,6 +244,58 @@ class vis:
         # Call the elbow_plot_indices function
          #indices_for_max_comp = vis_elbow(rsq_res, max_comp = 15)
          #indices_for_max_comp
+
+    @staticmethod
+    def cumu(x, xtitle="Feature Number", ytitle="Cumulative Explained Variance", title='Cumulative Explained Variance by Top Features',
+             max_comp=10, save_name=None):
+        """
+        Construct cumulative explained variance plot for top features.
+
+        Parameters:
+        -x:  Shapley R squared
+
+        Return:
+        A cumulative explained variance plot
+        """
+
+        # Step 1: Calculate the total variance explained (R²) as the sum of explained variances
+        r_squared = x.sum()  # Total R²
+
+        max_comp = int(min(max_comp, len(x)))
+
+        # Step 2: Sort variance explained in descending order
+        sorted_indices = np.argsort(-x)  # Sort in descending order
+        explained_variance_sorted = x[sorted_indices][:max_comp]
+
+        # Step 3: Calculate cumulative variance
+        cumulative_variance = np.cumsum(explained_variance_sorted)
+
+        plt.axhline(y=r_squared, color='red', linestyle='--', label=f'Model R² = {r_squared:.2f}')
+        plt.plot(
+            np.arange(1, len(explained_variance_sorted) + 1),  # X-axis: Number of components
+            cumulative_variance,                        # Y-axis: Cumulative variance
+            marker='o',                                 # Marker style
+            linestyle='-',                              # Line style
+            label='Cumulative Variance'
+        )
+
+        # Add labels and title
+        plt.xticks(ticks=np.arange(1, len(explained_variance_sorted) + 1))  # Ensure integer ticks for components
+        plt.xlabel('Number of Top Features')  # X-axis label
+        plt.ylabel('Cumulative R²')           # Y-axis label
+        plt.title('Cumulative Variance Explained by Components')  # Title
+
+        # Add legend
+        plt.legend()
+
+        if save_name is not None:
+            name = save_name + ".pdf"
+            plt.savefig(name, bbox_inches='tight')
+
+        # Show plot (grid is disabled by default)
+        plt.show()
+
+        plt.close()
     
     @staticmethod
     def gcorr(x, color_map_name="Blues", horizontal=False, max_feature=10, cutoff=0, title="Generalized Correlation of Features to the Outcome", xtitle="Feature index", ytitle="Generalized Correlation", rotation=0, label=None, decimal=3, save_name=None):

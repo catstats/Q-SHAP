@@ -181,6 +181,8 @@ vis.rsq(rsq_res, color_map_name="PuBu", horizontal=True, model_rsq=False, max_fe
 # Elbow plot 
 vis.elbow(rsq_res, max_comp=15)
 
+vis.cumu(rsq_res)
+
 # Vidualize individual loss
 # The interactive effect works with jupyter notebook
 vis.loss(loss_res)
