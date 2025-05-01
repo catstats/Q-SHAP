@@ -15,3 +15,9 @@ The author somehow decides to maintain a changelog starting from version 0.3.3 !
 ### Added
 
 - Cumulative R-squared plot !!!
+
+## [0.3.5] - 2025-05-01
+
+### Modified
+
+- init_prediction in function `summarize_tree` and `T2` so that the functions are more extensible

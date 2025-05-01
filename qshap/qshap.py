@@ -53,7 +53,7 @@ def T2(x, summary_tree, store_v_invc, store_z, parallel = True):
     treeshap value for the sample
     """
     
-    init_prediction = summary_tree.init_prediction[summary_tree.init_prediction!=0]
+    init_prediction = summary_tree.init_prediction[summary_tree.children_left < 0]
     
     shap_value = np.zeros_like(x)
     

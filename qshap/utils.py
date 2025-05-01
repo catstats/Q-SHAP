@@ -177,9 +177,11 @@ def summarize_tree(tree):
     def traversal_summarize_tree(v):
         v_l, v_r = tree.children_left[v], tree.children_right[v]
         n_v, n_l, n_r = tree.n_node_samples[v], tree.n_node_samples[v_l], tree.n_node_samples[v_r]
+
+        init_prediction[v] = tree.value[v] * n_v/n
         
         if v_l < 0:  #leaf
-            init_prediction[v] = tree.value[v] * n_v/n
+            return
         else:
             sample_weight[v_l], sample_weight[v_r] = n_v/n_l, n_v/n_r
             traversal_summarize_tree(v_l)
