@@ -21,3 +21,4 @@ The author somehow decides to maintain a changelog starting from version 0.3.3 !
 ### Modified
 
 - init_prediction in function `summarize_tree` and `T2` so that the functions are more extensible
+- Add values and n_node_samples to `tree_summary` class
