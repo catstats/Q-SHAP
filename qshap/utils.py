@@ -144,6 +144,8 @@ class tree_summary:
     - max_depth: the max_depth of the tree
     - sample_weight: list of sample size of parent/sample size of current node
     - init_prediction: initial prediction from each leaf
+    - value: array of values
+    - n_node_samples: array of node counts
     - node_count: number of nodes
     """
     children_left: np.ndarray
@@ -154,6 +156,8 @@ class tree_summary:
     max_depth: int
     sample_weight: np.ndarray
     init_prediction: np.ndarray
+    value: np.ndarray
+    n_node_samples: np.ndarray
     node_count: int
     
 
@@ -166,8 +170,8 @@ def summarize_tree(tree):
     feature: array of features splitted at each node
     threshold: array of threshols for corresponding splitting features
     max_depth: max_depth of the tree
-    n_node_samples: array of sample size for each node
     value: array of values for each node, only leaf value is used, so only keep leaf value is fine
+    n_node_samples: array of sample size for each node
     node_count: total number of leaves 
     """
     sample_weight = np.ones_like(tree.threshold)
@@ -192,7 +196,7 @@ def summarize_tree(tree):
     
     feature_uniq = np.unique(tree.feature[tree.feature >= 0])
    
-    return tree_summary(tree.children_left, tree.children_right, tree.feature, feature_uniq, tree.threshold, tree.max_depth, sample_weight, init_prediction, tree.node_count)
+    return tree_summary(tree.children_left, tree.children_right, tree.feature, feature_uniq, tree.threshold, tree.max_depth, sample_weight, init_prediction, tree.value, tree.n_node_samples, tree.node_count)
 
 
 def traversal_weight(x, v, w, children_left, children_right, feature, threshold, sample_weight, leaf_ind, w_res, w_ind, depth, met_feature):

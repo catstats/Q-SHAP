@@ -91,7 +91,6 @@ model_rsq = 1 - sse/sst
 print("Treeshap R^2 sum is: " + str(np.sum(rsq_res)))
 print("Model R^2 is: " + str(model_rsq) + "\n")
 
-np.sum(gazer_rsq.explainer.shap_values(x)*y[:, np.newaxis]/sst, axis=0)
 
 # scikit learn lightGBM example. The usage is the same again.
 # model fitting
