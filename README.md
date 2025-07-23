@@ -44,17 +44,16 @@ vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_hous
 ## Citation
 
 ```bibtex
-@article{jiang2024feature,
-  title={Feature-Specific Coefficients of Determination in Tree Ensembles},
-  author={Jiang, Zhongli and Zhang, Dabao and Zhang, Min},
-  journal={arXiv preprint arXiv:2407.03515},
-  year={2024}
+@inproceedings{jiangfast,
+  title={Fast Calculation of Feature Contributions in Boosting Trees},
+  author={Jiang, Zhongli and Zhang, Min and Zhang, Dabao},
+  booktitle={The 41st Conference on Uncertainty in Artificial Intelligence}
 }
 ```
 
 ## References
 
-- Jiang, Z., Zhang, D., & Zhang, M. (2024). "Feature-specific coefficients of determination in tree ensembles." arXiv preprint arXiv:2407.03515.
+- Jiang, Z., Zhang, M., & Zhang, D. Fast Calculation of Feature Contributions in Boosting Trees. In The 41st Conference on Uncertainty in Artificial Intelligence.
 - Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature Machine Intelligence 2.1 (2020): 56-67.
 - Karczmarz, Adam, et al. "Improved feature importance computation for tree models based on the Banzhaf value." Uncertainty in Artificial Intelligence. PMLR, 2022.
 - Bifet, Albert, Jesse Read, and Chao Xu. "Linear tree shap." Advances in Neural Information Processing Systems 35 (2022): 25818-25828.
