@@ -1,0 +1,25 @@
+{
+    "args": [
+        "-std=gnu++17",
+        "-I/Library/Frameworks/R.framework/Resources/include",
+        "-DNDEBUG",
+        "-I/Users/steven/repositories/Q-SHAP/qshapr/src",
+        "-I/opt/R/arm64/include",
+        "-fPIC",
+        "-falign-functions=64",
+        "-I/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/Rcpp/include",
+        "-I/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include",
+        "-DEIGEN_DONT_VECTORIZE",
+        "-I/Library/Developer/CommandLineTools/usr/lib/clang/16.0.0/include",
+        "-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1",
+        "-I/Library/Developer/CommandLineTools/usr/lib/clang/16/include",
+        "-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include",
+        "-I/Library/Developer/CommandLineTools/usr/include"
+    ],
+    "pch": "RcppEigen",
+    "is_cpp": true,
+    "hash": "175549414417554933281755493328",
+    "compiler": "15235749491757182488",
+    "rversion": "4.4.2",
+    "dbversion": 4
+}

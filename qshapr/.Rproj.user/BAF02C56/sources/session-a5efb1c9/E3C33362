@@ -1,0 +1,27 @@
+{
+    "id": "E3C33362",
+    "path": "~/repositories/Q-SHAP/qshapr/tests/xgboost_test2.R",
+    "project_path": "tests/xgboost_test2.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1749685897917.0,
+    "source_on_save": false,
+    "relative_order": 8,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "marks": "<:13,5\n>:13,22",
+        "cursorPosition": "29,10",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1749686511,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1749686511047,
+    "read_only": false,
+    "read_only_alternatives": []
+}

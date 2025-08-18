@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "vector": "cpp",
+        "algorithm": "cpp",
+        "functional": "cpp",
+        "ios": "cpp",
+        "memory": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp"
+    }
+}
