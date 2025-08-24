@@ -21,16 +21,14 @@ qshap_loss_xgboost <- function(explainer, x, y, y_mean_ori = NULL) {
   for (i in seq_len(num_tree)) { # i is the 1-based index of the current tree (round i)
     
     local_res <- NULL 
-    # T0_x_tree <- NULL  # SHAP values for the current tree (round i)
-    T0_x_tree <- predict(model, x, predcontrib = TRUE)
-
+    
     if (i == 1) { # For the first tree (round 1)
       local_res <- y - base_score
       
       # SHAP values for the first tree (round 1 only)
       # iterationrange = c(1, 2) means use tree from round 1 up to (but not including) round 2. So, only round 1.
       shap_round_1_cumulative <- predict(model, x, predcontrib = TRUE, iterationrange = c(1, 2))
-      # T0_x_tree <- shap_round_1_cumulative[, -ncol(shap_round_1_cumulative), drop = FALSE]
+      T0_x_tree <- shap_round_1_cumulative[, -ncol(shap_round_1_cumulative), drop = FALSE]
     } else { # For subsequent trees (round i, where i > 1)
       # Calculate residual: y - prediction_from_rounds_1_to_(i-1)
       # iterationrange = c(1, i) means use trees from round 1 up to (but not including) round i. So, rounds 1 to i-1.
@@ -39,12 +37,13 @@ qshap_loss_xgboost <- function(explainer, x, y, y_mean_ori = NULL) {
       
       # SHAP values for current tree (round i)
       # SHAP from rounds 1 to i: iterationrange = c(1, i + 1)
-      # shap_total_up_to_round_i <- predict(model, x, predcontrib = TRUE, iterationrange = c(1, i + 1))
+      shap_total_up_to_round_i <- predict(model, x, predcontrib = TRUE, iterationrange = c(1, i + 1))
       # SHAP from rounds 1 to i-1: iterationrange = c(1, i)
-      # shap_total_up_to_round_i_minus_1 <- predict(model, x, predcontrib = TRUE, iterationrange = c(1, i))
+      shap_total_up_to_round_i_minus_1 <- predict(model, x, predcontrib = TRUE, iterationrange = c(1, i))
       
-      # T0_x_tree <- shap_total_up_to_round_i[, -ncol(shap_total_up_to_round_i), drop = FALSE] - 
-                   # jshap_total_up_to_round_i_minus_1[, -ncol(shap_total_up_to_round_i_minus_1), drop = FALSE]
+      # Marginal SHAP contribution of tree i (remove bias columns)
+      T0_x_tree <- shap_total_up_to_round_i[, -ncol(shap_total_up_to_round_i), drop = FALSE] - 
+                   shap_total_up_to_round_i_minus_1[, -ncol(shap_total_up_to_round_i_minus_1), drop = FALSE]
     }
     
     # xgb_trees is a 1-indexed list in R. xgb_trees[[i]] is the tree for round i.

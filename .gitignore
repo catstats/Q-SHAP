@@ -6,3 +6,4 @@ build
 *.pdf
 .ipynb_checkpoints/
 tempCodeRunnerFile.py
+.Rproj.user

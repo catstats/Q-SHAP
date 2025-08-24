@@ -19,7 +19,7 @@ create_tree_explainer.xgb.Booster <- function(tree_model, ...) {
 
   # Apparently we don't have to do some weird JSON workaround
   max_depth <- if (!is.null(tree_model$params$max_depth)) tree_model$params$max_depth else 6
-  base_score <- if (!is.null(tree_model$params$base_score)) tree_model$params$base_score else 0.5
+  base_score <- if (!is.null(tree_model$params$base_score)) tree_model$params$base_score else 0.0
 
 
   xgb_trees <- xgb_formatter(tree_model, max_depth)
@@ -44,16 +44,12 @@ create_tree_explainer.lgb.Booster <- function(tree_model, max_depth = NULL, ...)
   
   # Format LightGBM trees
   lgb_trees <- lgb_formatter(tree_model, max_depth)
-  
-  # Create SHAP models for individual tree calculations
-  lgb_shap_models <- lgb_shap(lgb_trees)
 
   explainer <- structure(list(
     model = tree_model,
     model_type = "lightgbm",
     max_depth = max_depth,
     trees = lgb_trees,
-    lgb_shap_models = lgb_shap_models,
     store_v_invc = store_complex_v_invc(max_depth * 2),
     store_z = store_complex_root(max_depth * 2)
   ), class = c("qshapr_tree_explainer", "lightgbm_explainer"))
