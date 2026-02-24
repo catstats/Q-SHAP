@@ -19,26 +19,27 @@ pip install qshap
 
 ```python
 # Import necessary libraries
-from sklearn.datasets import fetch_california_housing
+from ISLP import load_data
 from qshap import gazer, vis
 import xgboost as xgb
 import numpy as np
 
-# Load the California Housing dataset and fit a XGBoost regressor
-housing = fetch_california_housing()
-x, y, feature_names = housing.data, housing.target, housing.feature_names
+# Load the Boston dataset and fit a XGBoost regressor
+boston = load_data('Boston')
+feature_names = [col for col in boston.columns if col != 'medv']
+x, y = boston[feature_names].values, boston['medv'].values
 model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42).fit(x, y)
 
-# Obtain feature-specific R^2 using qshap, use 1024 randomly sampled data
+# Obtain feature-specific R^2 using qshap
 gazer_rsq = gazer(model)
-phi_rsq = gazer.rsq(gazer_rsq, x, y, nsample=1024, random_state=42)
+phi_rsq = gazer.rsq(gazer_rsq, x, y)
 
 # Visualize top values of feature-specific R^2
-vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing", color_map_name="Pastel2")
+vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="boston", color_map_name="Pastel2")
 ```
 
 <p align="center">
-  <img width="500" src="./figs/cal_housing.png" />
+  <img width="500" src="./figs/boston.png" />
 </p>
 
 ## Citation
