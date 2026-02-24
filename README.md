@@ -43,7 +43,7 @@ model = xgb.XGBRegressor(
     learning_rate=0.1,
 ).fit(x, y)
 
-# ---- Obtain feature-specific R^2 using qshap (1024 sampled rows) ----
+# ---- Obtain feature-specific R^2 using qshap ----
 g = gazer(model)
 
 phi_rsq = g.rsq(x, y)
