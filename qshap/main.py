@@ -39,7 +39,7 @@ class gazer:
 
                 unique_filename = str(uuid.uuid4())
                 model_filename = f"xgb_model_{unique_filename}.json"
-                model.save_model(model_filename)
+                model.get_booster().save_model(model_filename)
 
                # Load the model data
                 with open(model_filename, 'r') as file:
