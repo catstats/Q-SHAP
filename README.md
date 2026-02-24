@@ -60,7 +60,7 @@ vis.rsq(
 ```
 
 <p align="center">
-  <img width="500" src="./figs/boston_housing.pdf" />
+  <img width="500" src="./figs/boston_housing.p" />
 </p>
 
 ## Citation

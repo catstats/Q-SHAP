@@ -3,5 +3,6 @@ build
 *.egg-info
 *.egg-info/
 *_checkpoints
+*.pdf
 .ipynb_checkpoints/
 tempCodeRunnerFile.py
