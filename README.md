@@ -19,26 +19,30 @@ pip install qshap
 
 ```python
 # Import necessary libraries
-from sklearn.datasets import fetch_california_housing
+import pandas as pd
+import numpy as np
 from qshap import gazer, vis
 import xgboost as xgb
-import numpy as np
 
-# Load the California Housing dataset and fit a XGBoost regressor
-housing = fetch_california_housing()
-x, y, feature_names = housing.data, housing.target, housing.feature_names
+# Load the Boston Housing dataset and fit a XGBoost regressor
+data_url = "http://lib.stat.cmu.edu/datasets/boston"
+raw_df = pd.read_csv(data_url, sep=r"\s+", skiprows=22, header=None)
+# The dataset is stored in alternating rows; combine them into a single array
+x = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
+y = raw_df.values[1::2, 2]
+feature_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
 model = xgb.XGBRegressor(max_depth=2, n_estimators=50, random_state=42).fit(x, y)
 
-# Obtain feature-specific R^2 using qshap, use 1024 randomly sampled data
+# Obtain feature-specific R^2 using qshap
 gazer_rsq = gazer(model)
-phi_rsq = gazer.rsq(gazer_rsq, x, y, nsample=1024, random_state=42)
+phi_rsq = gazer.rsq(gazer_rsq, x, y)
 
 # Visualize top values of feature-specific R^2
-vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="cal_housing", color_map_name="Pastel2")
+vis.rsq(phi_rsq, label=np.array(feature_names), rotation=30, save_name="bos_housing", color_map_name="Pastel2")
 ```
 
 <p align="center">
-  <img width="500" src="./figs/cal_housing.png" />
+  <img width="500" src="./figs/bos_housing.png" />
 </p>
 
 ## Citation
