@@ -66,10 +66,14 @@ vis.rsq(
 ## Citation
 
 ```bibtex
-@inproceedings{jiangfast,
-  title={Fast Calculation of Feature Contributions in Boosting Trees},
-  author={Jiang, Zhongli and Zhang, Min and Zhang, Dabao},
-  booktitle={The 41st Conference on Uncertainty in Artificial Intelligence}
+@inproceedings{10.5555/3762387.3762469,
+author = {Jiang, Zhongli and Zhang, Min and Zhang, Dabao},
+title = {Fast calculation of feature contributions in boosting trees},
+year = {2025},
+publisher = {JMLR.org},
+numpages = {17},
+location = {Rio de Janeiro, Brazil},
+series = {UAI '25}
 }
 ```
 
