@@ -66,20 +66,22 @@ vis.rsq(
 ## Citation
 
 ```bibtex
-@inproceedings{jiangfast,
-  title={Fast Calculation of Feature Contributions in Boosting Trees},
-  author={Jiang, Zhongli and Zhang, Min and Zhang, Dabao},
-  booktitle={The 41st Conference on Uncertainty in Artificial Intelligence}
+@inproceedings{10.5555/3762387.3762469,
+author = {Jiang, Zhongli and Zhang, Min and Zhang, Dabao},
+title = {Fast calculation of feature contributions in boosting trees},
+year = {2025},
+publisher = {JMLR.org},
+numpages = {17},
+location = {Rio de Janeiro, Brazil},
+series = {UAI '25}
 }
+
 ```
 
-## References
+## Reference
+- Jiang, Z., Zhang, M., & Zhang, D. (2025). Fast calculation of feature contributions in boosting trees. *Proceedings of the 41st Conference on Uncertainty in Artificial Intelligence (UAI)*, 82:1859 - 1875
 
-- Jiang, Z., Zhang, M., & Zhang, D. Fast Calculation of Feature Contributions in Boosting Trees. In The 41st Conference on Uncertainty in Artificial Intelligence.
-- Lundberg, Scott M., et al. "From local explanations to global understanding with explainable AI for trees." Nature Machine Intelligence 2.1 (2020): 56-67.
-- Karczmarz, Adam, et al. "Improved feature importance computation for tree models based on the Banzhaf value." Uncertainty in Artificial Intelligence. PMLR, 2022.
-- Bifet, Albert, Jesse Read, and Chao Xu. "Linear tree shap." Advances in Neural Information Processing Systems 35 (2022): 25818-25828.
-- Chen, Tianqi, and Carlos Guestrin. "Xgboost: A scalable tree boosting system." Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. 2016.
+
 
 ## Container Images
 
@@ -96,6 +98,3 @@ We provide pre-built images, available for both Docker and Singularity, with all
   singularity pull docker://catstat/xai:0.1
   ```
 
-## Task List
-
-- [ ] Task 1: Catboost version
