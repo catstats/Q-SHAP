@@ -95,7 +95,3 @@ We provide pre-built images, available for both Docker and Singularity, with all
   ```sh
   singularity pull docker://catstat/xai:0.1
   ```
-
-## Task List
-
-- [ ] Task 1: Catboost version
