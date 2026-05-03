@@ -170,6 +170,8 @@ class gazer:
         -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
         -random_state: control random seed for numpy
         -progress_bar: whether show the progress bar or not
+        -backend: "auto" uses the compiled C++ backend when available; "numba"
+         uses the Python/numba reference implementation for understanding the algorithm.
 
         Return
         Shapley R-squared

@@ -13,6 +13,9 @@ from qshap._backend import (
 from qshap.utils import complex_dot_v2, weight
 
 
+# Numba reference implementation.
+# Kept intentionally as the Python/numba version for understanding the
+# algorithm and for debugging against the faster C++ backend.
 @njit
 def T2_sample(i, w_matrix, w_ind, init_prediction, store_v_invc, store_z, shap_value, feature_uniq):
     ## Calculate T2 for each sample
@@ -56,6 +59,8 @@ def T2(x, summary_tree, store_v_invc, store_z, parallel = True, backend="auto"):
     Parameters:
     -x: sample to be explained
     -summary_tree: summary tree
+    -backend: "auto" uses the C++ backend when available; "numba" uses the
+     readable Python/numba reference implementation.
     
     Return:
     treeshap value for the sample
