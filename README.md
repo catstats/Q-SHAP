@@ -5,7 +5,7 @@
 
 This package is used to compute feature-specific $R^2$ values, following Shapley decomposition of the total $R^2$, for tree ensembles in polynomial time based on the [paper](https://arxiv.org/abs/2407.03515).
 
-This version only takes outputs from **XGBoost**, **LightGBM**, **scikit-learn Decision Tree**, and **scikit-learn GBDT**. We are working to update it for random forests in the next version. Please check [Q-SHAP Tutorial](./Q-SHAP%20Tutorial.ipynb) for more details using Q-SHAP.
+This version supports **XGBoost**, **LightGBM**, **CatBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT** regression models. We are working to update it for random forests in the next version. Please check [Q-SHAP Tutorial](./Q-SHAP%20Tutorial.ipynb) for more details using Q-SHAP.
 
 ## Installation
 
@@ -15,18 +15,42 @@ This version only takes outputs from **XGBoost**, **LightGBM**, **scikit-learn D
 pip install qshap
 </pre>
 
+Install the model libraries you need with optional extras:
+
+```sh
+pip install "qshap[xgboost]"
+pip install "qshap[lightgbm]"
+pip install "qshap[catboost]"
+
+# Or install all supported boosting backends:
+pip install "qshap[all]"
+```
+
 Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
 when available. To force the original numba implementation for comparison or
 debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
 
-## Quick Start
+## Imports
+
+Use the import that matches the model backend you fit:
 
 ```python
-# Import necessary libraries
-from ISLP import load_data
-from qshap import gazer, vis
-import xgboost as xgb
 import numpy as np
+from qshap import gazer, vis
+
+# Pick one or more model libraries:
+import xgboost as xgb
+import lightgbm as lgb
+import catboost as cb
+```
+
+## Quick Start with XGBoost
+
+```python
+from ISLP import load_data
+import numpy as np
+import xgboost as xgb
+from qshap import gazer, vis
 
 boston = load_data("Boston")
 
@@ -61,6 +85,42 @@ vis.rsq(
     save_name="boston_housing",
     color_map_name="Pastel2"
 )
+```
+
+The same `gazer(model).rsq(x, y)` call works for LightGBM:
+
+```python
+import lightgbm as lgb
+from qshap import gazer
+
+model = lgb.LGBMRegressor(
+    max_depth=2,
+    n_estimators=50,
+    learning_rate=0.1,
+    verbose=-1,
+    random_state=42,
+).fit(x, y)
+
+phi_rsq = gazer(model).rsq(x, y)
+```
+
+And for CatBoost:
+
+```python
+import catboost as cb
+from qshap import gazer
+
+model = cb.CatBoostRegressor(
+    depth=2,
+    iterations=50,
+    learning_rate=0.1,
+    loss_function="RMSE",
+    verbose=False,
+    allow_writing_files=False,
+    random_seed=42,
+).fit(x, y)
+
+phi_rsq = gazer(model).rsq(x, y)
 ```
 
 <p align="center">

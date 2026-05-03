@@ -2,6 +2,18 @@
 
 The author somehow decides to maintain a changelog starting from version 0.3.3 !!
 
+## [0.3.8] - 2026-05-03
+
+### Added
+
+- Added CatBoostRegressor support for the Python package.
+- Added optional install extras for XGBoost, LightGBM, CatBoost, and all boosting backends.
+
+### Modified
+
+- Improved the C++ weight traversal by replacing per-branch vector copies with in-place backtracking.
+- Made model-library imports optional and clearer.
+
 ## [0.3.3] - 2024-10-07
 
 ### Added

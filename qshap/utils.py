@@ -355,18 +355,158 @@ def lgb_formatter(model_data, max_depth):
     return(lgb_tree)
 
 
-def lgb_shap(formatter):
+def _catboost_split_feature(split_info):
+    split_type = split_info.get("split_type", "FloatFeature")
+    if split_type != "FloatFeature":
+        raise NotImplementedError(
+            "CatBoost support currently handles numeric FloatFeature splits only. "
+            "Train CatBoost on numeric features for qshap, or add categorical "
+            "split handling before calling gazer()."
+        )
+
+    if "float_feature_index" in split_info:
+        return int(split_info["float_feature_index"])
+    if "split_index" in split_info:
+        return int(split_info["split_index"])
+    raise ValueError("Cannot find feature index in CatBoost split info")
+
+
+def _catboost_split_threshold(split_info):
+    if "border" in split_info:
+        return float(split_info["border"])
+    if "threshold" in split_info:
+        return float(split_info["threshold"])
+    raise ValueError("Cannot find threshold/border in CatBoost split info")
+
+
+def catboost_oblivious_to_simple(tree_data, scale=1.0):
     """
-    transform the output from lgb_formatter() so that is necessary for Treeshap calculation
-    
+    Convert one CatBoost oblivious tree from JSON into the simple_tree format.
+
+    CatBoost stores symmetric-tree splits bottom-up and leaf values in
+    little-endian leaf-index order. Reversing the splits gives a top-down
+    complete binary tree whose BFS leaf order matches CatBoost's leaf order.
+    """
+    splits = tree_data.get("splits", [])
+    leaf_values = np.asarray(tree_data["leaf_values"], dtype=np.float64) * scale
+    leaf_weights = np.asarray(
+        tree_data.get("leaf_weights", np.ones_like(leaf_values)),
+        dtype=np.float64,
+    )
+
+    empty_mask = leaf_weights == 0
+    if np.any(empty_mask):
+        leaf_weights = leaf_weights.copy()
+        leaf_values = leaf_values.copy()
+        leaf_weights[empty_mask] = 1.0
+        leaf_values[empty_mask] = 0.0
+
+    depth = len(splits)
+    if depth == 0:
+        return simple_tree(
+            np.array([-1], dtype=np.int64),
+            np.array([-1], dtype=np.int64),
+            np.array([-1], dtype=np.int64),
+            np.array([0.0], dtype=np.float64),
+            0,
+            np.array([leaf_weights[0]], dtype=np.float64),
+            np.array([leaf_values[0]], dtype=np.float64),
+            1,
+        )
+
+    splits_topdown = list(reversed(splits))
+    num_leaves = 1 << depth
+    num_internal = num_leaves - 1
+    total_nodes = (1 << (depth + 1)) - 1
+
+    children_left = np.full(total_nodes, -1, dtype=np.int64)
+    children_right = np.full(total_nodes, -1, dtype=np.int64)
+    feature = np.full(total_nodes, -1, dtype=np.int64)
+    threshold = np.zeros(total_nodes, dtype=np.float64)
+    value = np.zeros(total_nodes, dtype=np.float64)
+    n_node_samples = np.zeros(total_nodes, dtype=np.float64)
+
+    for node in range(num_internal):
+        level = (node + 1).bit_length() - 1
+        split_info = splits_topdown[level]
+        children_left[node] = 2 * node + 1
+        children_right[node] = 2 * node + 2
+        feature[node] = _catboost_split_feature(split_info)
+        threshold[node] = _catboost_split_threshold(split_info)
+
+    if leaf_values.shape[0] != num_leaves:
+        raise ValueError("CatBoost leaf_values length does not match tree depth")
+
+    for leaf_pos in range(num_leaves):
+        node = num_internal + leaf_pos
+        value[node] = leaf_values[leaf_pos]
+        n_node_samples[node] = leaf_weights[leaf_pos]
+
+    for node in range(num_internal - 1, -1, -1):
+        left = children_left[node]
+        right = children_right[node]
+        nl = n_node_samples[left]
+        nr = n_node_samples[right]
+        total = nl + nr
+        n_node_samples[node] = total
+        value[node] = (nl * value[left] + nr * value[right]) / total
+
+    return simple_tree(
+        children_left,
+        children_right,
+        feature,
+        threshold,
+        depth,
+        n_node_samples,
+        value,
+        total_nodes,
+    )
+
+
+def catboost_formatter(model_data):
+    """
+    Convert CatBoost JSON model data into simple_tree objects.
+
+    Returns:
+    - trees: list[simple_tree]
+    - bias: CatBoost model bias/intercept
+    - max_depth: maximum depth across trees
+    """
+    scale = 1.0
+    bias = 0.0
+    scale_and_bias = model_data.get("scale_and_bias")
+    if scale_and_bias is not None and len(scale_and_bias) >= 2:
+        scale = float(scale_and_bias[0])
+        raw_bias = scale_and_bias[1]
+        if isinstance(raw_bias, list):
+            bias = float(raw_bias[0]) if raw_bias else 0.0
+        else:
+            bias = float(raw_bias)
+
+    trees_data = model_data.get("oblivious_trees")
+    if trees_data is None:
+        raise ValueError(
+            "Could not find oblivious_trees in CatBoost JSON. "
+            "Only symmetric/oblivious CatBoost trees are currently supported."
+        )
+
+    trees = [catboost_oblivious_to_simple(tree, scale=scale) for tree in trees_data]
+    max_depth = max((tree.max_depth for tree in trees), default=0)
+    return trees, bias, max_depth
+
+
+def simple_trees_to_shap_models(formatter):
+    """
+    transform simple_tree objects into the dictionary format shap.TreeExplainer accepts
+
     Parameters:
-    -formater: output from lgb_formatter()
+    -formatter: output from lgb_formatter(), catboost_formatter(), or similar
 
     Return:
-    A new model Treeshap can call
+    A list of one-tree models that shap.TreeExplainer can call
     """
     num_tree = len(formatter)
-    lgb_shap = []
+    shap_models = []
     
     for i in range(num_tree):
         tree = formatter[i]
@@ -389,9 +529,13 @@ def lgb_shap(formatter):
         }
         model = {"trees": [tree_dict]}
 
-        lgb_shap.append(model)
+        shap_models.append(model)
         
-    return(lgb_shap)
+    return(shap_models)
+
+
+def lgb_shap(formatter):
+    return simple_trees_to_shap_models(formatter)
 
 # Define a function to divide the dataset into chunks
 def divide_chunks(data, n_chunks):
@@ -407,4 +551,3 @@ def divide_chunks(data, n_chunks):
         chunks.append(data[start_index:end_index])
 
     return chunks
-

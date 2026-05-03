@@ -23,7 +23,7 @@ qshap_cpp = Extension(
 
 setup(
     name='qshap',
-    version='0.3.7',
+    version='0.3.8',
     description='Exact computation of Shapley R-squared for tree ensembles in polynomial time',
     long_description=open('README.md').read(),    
     long_description_content_type='text/markdown',  # Specify that the long_description is in Markdown
@@ -35,7 +35,12 @@ setup(
     cmdclass={"build_ext": BuildExt},
     url="https://github.com/catstats/Q-SHAP",
     install_requires=['numpy', 'scikit-learn',  'shap', 'numba', 'ipywidgets', 'pandas', 'matplotlib'],
-    extras_require={'xgboost': ['xgboost'],'lightgbm': ['lightgbm']},
+    extras_require={
+        'xgboost': ['xgboost'],
+        'lightgbm': ['lightgbm'],
+        'catboost': ['catboost'],
+        'all': ['xgboost', 'lightgbm', 'catboost'],
+    },
     classifiers=[
         'Operating System :: Microsoft :: Windows',
         'Operating System :: Unix',

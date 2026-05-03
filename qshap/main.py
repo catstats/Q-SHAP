@@ -1,67 +1,132 @@
-from qshap.utils import summarize_tree, simple_tree, tree_summary, weight, store_complex_root, store_complex_v_invc, xgb_formatter, lgb_formatter, lgb_shap, divide_chunks
-from qshap.qshap import loss_treeshap
-
-from types import SimpleNamespace
+import json
+import os
+import tempfile
+import warnings
 from concurrent.futures import ProcessPoolExecutor
+from types import SimpleNamespace
+
+import numpy as np
+import shap
+import sklearn.ensemble
+import sklearn.tree
 from tqdm import tqdm
 
-import sklearn
-import numpy as np
-import xgboost
-import lightgbm
-import shap
-import warnings
-import os
-import json
-import tempfile
+from qshap.qshap import loss_treeshap
+from qshap.utils import (
+    catboost_formatter,
+    divide_chunks,
+    lgb_formatter,
+    lgb_shap,
+    simple_trees_to_shap_models,
+    store_complex_root,
+    store_complex_v_invc,
+    summarize_tree,
+    xgb_formatter,
+)
+
+try:
+    import xgboost
+except ImportError:  # pragma: no cover - depends on optional extras
+    xgboost = None
+
+try:
+    import lightgbm
+except ImportError:  # pragma: no cover - depends on optional extras
+    lightgbm = None
+
+try:
+    import catboost
+except ImportError:  # pragma: no cover - depends on optional extras
+    catboost = None
+
+
+def _is_xgboost_regressor(model):
+    return xgboost is not None and isinstance(model, xgboost.sklearn.XGBRegressor)
+
+
+def _is_lightgbm_regressor(model):
+    return lightgbm is not None and isinstance(model, lightgbm.sklearn.LGBMRegressor)
+
+
+def _is_catboost_regressor(model):
+    return catboost is not None and isinstance(model, catboost.CatBoostRegressor)
+
+
+def _supported_models_message():
+    return (
+        "Supported models are: scikit-learn DecisionTreeRegressor, "
+        "scikit-learn GradientBoostingRegressor, XGBoost XGBRegressor "
+        "(install with `pip install qshap[xgboost]`), LightGBM LGBMRegressor "
+        "(install with `pip install qshap[lightgbm]`), and CatBoostRegressor "
+        "(install with `pip install qshap[catboost]`)."
+    )
+
+
+def _save_model_json(model, *, package_name):
+    tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+    model_filename = tmp.name
+    tmp.close()
+    try:
+        if package_name == "catboost":
+            model.save_model(model_filename, format="json")
+        else:
+            model.save_model(model_filename)
+
+        with open(model_filename, "r") as file:
+            return json.load(file)
+    finally:
+        if os.path.exists(model_filename):
+            os.remove(model_filename)
 
 class gazer:
     def __init__(self, model):
         self.model = model
-        implemented_model = (sklearn.tree.DecisionTreeRegressor,
-                                sklearn.ensemble.GradientBoostingRegressor,
-                                xgboost.sklearn.XGBRegressor,
-                                lightgbm.sklearn.LGBMRegressor)
-        
-        if isinstance(model, implemented_model):
+        self.explainer = None
+        self.model_kind = None
+
+        if isinstance(model, sklearn.tree.DecisionTreeRegressor):
+            self.model_kind = "sklearn_tree"
             self.explainer = shap.TreeExplainer(model)
-            if isinstance(model, (sklearn.tree.DecisionTreeRegressor,sklearn.ensemble.GradientBoostingRegressor)):
-                self.max_depth = model.max_depth
-            elif isinstance(model, lightgbm.sklearn.LGBMRegressor):
-                self.max_depth = model.get_params()['max_depth']
-            elif isinstance(model, xgboost.sklearn.XGBRegressor):
-                # set to default value 6 if max_depth not set by user 
-                max_depth_xgb = model.get_params().get("max_depth")
-                if max_depth_xgb is not None:
-                    self.max_depth = max_depth_xgb
-                else:
-                    self.max_depth = 6
+            self.max_depth = model.tree_.max_depth
 
-                tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
-                model_filename = tmp.name
-                tmp.close()
-                model.save_model(model_filename)
+        elif isinstance(model, sklearn.ensemble.GradientBoostingRegressor):
+            self.model_kind = "sklearn_gbdt"
+            self.explainer = shap.TreeExplainer(model)
+            self.max_depth = model.max_depth
 
-               # Load the model data
-                with open(model_filename, 'r') as file:
-                    model_data = json.load(file)
-                # Delete it after loading 
-                os.remove(model_filename)
-                base_score = model_data["learner"]["learner_model_param"]['base_score']
-                if isinstance(base_score, str):
-                    base_score = base_score.replace("[", "").replace("]", "")
-                elif isinstance(base_score, list):
-                    base_score = base_score[0]
-                self.base_score = np.float64(base_score)
-                self.xgb_res = xgb_formatter(model_data, self.max_depth)
-                del model_data
+        elif _is_xgboost_regressor(model):
+            self.model_kind = "xgboost"
+            max_depth_xgb = model.get_params().get("max_depth")
+            self.max_depth = max_depth_xgb if max_depth_xgb is not None and max_depth_xgb > 0 else 6
 
-            # store v_inc * c /d evaluated at complex roots     
-            self.store_v_invc = store_complex_v_invc(self.max_depth * 2)
-            self.store_z = store_complex_root(self.max_depth * 2)
+            model_data = _save_model_json(model, package_name="xgboost")
+            base_score = model_data["learner"]["learner_model_param"]["base_score"]
+            if isinstance(base_score, str):
+                base_score = base_score.replace("[", "").replace("]", "")
+            elif isinstance(base_score, list):
+                base_score = base_score[0]
+            self.base_score = np.float64(base_score)
+            self.xgb_res = xgb_formatter(model_data, self.max_depth)
+
+        elif _is_lightgbm_regressor(model):
+            self.model_kind = "lightgbm"
+            max_depth_lgb = model.get_params().get("max_depth")
+            self.max_depth = max_depth_lgb if max_depth_lgb is not None and max_depth_lgb > 0 else 31
+            self.lgb_res = lgb_formatter(model.booster_.trees_to_dataframe(), self.max_depth)
+            self.lgb_shap_res = lgb_shap(self.lgb_res)
+
+        elif _is_catboost_regressor(model):
+            self.model_kind = "catboost"
+            model_data = _save_model_json(model, package_name="catboost")
+            self.catboost_res, self.base_score, self.max_depth = catboost_formatter(model_data)
+            self.catboost_shap_res = simple_trees_to_shap_models(self.catboost_res)
+
         else:
-            supported_models_str = ', '.join([m.__name__ for m in implemented_model])
-            raise NotImplementedError(f"Model not supported yet. Supported models are: {supported_models_str}")
+            raise NotImplementedError(f"Model not supported yet. {_supported_models_message()}")
+
+        # store v_inc * c /d evaluated at complex roots
+        self.store_v_invc = store_complex_v_invc(self.max_depth * 2)
+        self.store_z = store_complex_root(self.max_depth * 2)
         
 
     def loss(self, x, y, y_mean_ori=None, progress_bar=True, backend="auto"):
@@ -81,12 +146,12 @@ class gazer:
         if y_mean_ori is None:
             y_mean_ori = np.mean(y)
 
-        if isinstance(model, sklearn.tree.DecisionTreeRegressor):
+        if self.model_kind == "sklearn_tree":
             summary_tree = summarize_tree(model.tree_)
             loss = loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, backend=backend)
 
         # GBM 
-        elif isinstance(model, sklearn.ensemble.GradientBoostingRegressor):
+        elif self.model_kind == "sklearn_gbdt":
             ensemble_tree = model.estimators_
             num_tree = len(model)
             staged_predict = list(model.staged_predict(x))
@@ -108,7 +173,7 @@ class gazer:
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, alpha, backend=backend)
 
         # XGBOOST 
-        elif isinstance(model, xgboost.sklearn.XGBRegressor):
+        elif self.model_kind == "xgboost":
 
             xgb_booster = model.get_booster()           
             xgb_res = self.xgb_res
@@ -134,9 +199,9 @@ class gazer:
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
 
         # LightGBM
-        elif isinstance(model, lightgbm.sklearn.LGBMRegressor):
-            lgb_res = lgb_formatter(model.booster_.trees_to_dataframe(), max_depth)
-            lgb_shap_res = lgb_shap(lgb_res)
+        elif self.model_kind == "lightgbm":
+            lgb_res = self.lgb_res
+            lgb_shap_res = self.lgb_shap_res
             num_tree = model.n_iter_
 
             loss = np.zeros_like(x, dtype=np.float64)
@@ -154,6 +219,26 @@ class gazer:
                 explainer = shap.TreeExplainer(lgb_shap_res[i])
                 
                 # learning rate is different
+                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
+
+        # CatBoost
+        elif self.model_kind == "catboost":
+            cb_res = self.catboost_res
+            cb_shap_res = self.catboost_shap_res
+            num_tree = len(cb_res)
+
+            loss = np.zeros_like(x, dtype=np.float64)
+
+            iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
+
+            for i in iterator:
+                if i == 0:
+                    res = y - self.base_score
+                else:
+                    res = y - model.predict(x, ntree_end=i)
+
+                summary_tree = summarize_tree(cb_res[i])
+                explainer = shap.TreeExplainer(cb_shap_res[i])
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
 
         return loss

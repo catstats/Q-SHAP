@@ -91,8 +91,8 @@ void traversal_weight(
     const double *x_row,
     int node,
     int depth,
-    std::vector<double> w,
-    std::vector<int> met_feature,
+    std::vector<double> &w,
+    std::vector<int> &met_feature,
     const TreeArrays &tree,
     const std::vector<int> &leaf_position,
     std::vector<double> &w_matrix,
@@ -123,26 +123,32 @@ void traversal_weight(
             former_depth = d;
         }
     }
-    if (former_depth < 0) {
-        former_depth = depth;
-        w[depth] = 1.0;
-    }
+    const double base_weight = (former_depth < 0) ? 1.0 : w[former_depth];
 
+    const double old_weight = w[depth];
+    const int old_feature = met_feature[depth];
     met_feature[depth] = split_feature;
-    std::vector<double> w_right = w;
 
     if (x_row[split_feature] <= split_threshold) {
-        w[depth] = w[former_depth] * tree.sample_weight[left];
-        w_right[depth] = 0.0;
-    } else {
-        w_right[depth] = w_right[former_depth] * tree.sample_weight[right];
+        w[depth] = base_weight * tree.sample_weight[left];
+        traversal_weight(x_row, left, depth + 1, w, met_feature, tree, leaf_position,
+                         w_matrix, w_ind, n_features);
+
         w[depth] = 0.0;
+        traversal_weight(x_row, right, depth + 1, w, met_feature, tree,
+                         leaf_position, w_matrix, w_ind, n_features);
+    } else {
+        w[depth] = 0.0;
+        traversal_weight(x_row, left, depth + 1, w, met_feature, tree, leaf_position,
+                         w_matrix, w_ind, n_features);
+
+        w[depth] = base_weight * tree.sample_weight[right];
+        traversal_weight(x_row, right, depth + 1, w, met_feature, tree,
+                         leaf_position, w_matrix, w_ind, n_features);
     }
 
-    traversal_weight(x_row, left, depth + 1, w, met_feature, tree, leaf_position,
-                     w_matrix, w_ind, n_features);
-    traversal_weight(x_row, right, depth + 1, w_right, met_feature, tree,
-                     leaf_position, w_matrix, w_ind, n_features);
+    w[depth] = old_weight;
+    met_feature[depth] = old_feature;
 }
 
 void compute_weight(
