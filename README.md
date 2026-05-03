@@ -15,6 +15,10 @@ This version only takes outputs from **XGBoost**, **LightGBM**, **scikit-learn D
 pip install qshap
 </pre>
 
+Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
+when available. To force the original numba implementation for comparison or
+debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
+
 ## Quick Start
 
 ```python

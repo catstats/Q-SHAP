@@ -13,7 +13,7 @@ import shap
 import warnings
 import os
 import json
-import uuid
+import tempfile
 
 class gazer:
     def __init__(self, model):
@@ -37,8 +37,9 @@ class gazer:
                 else:
                     self.max_depth = 6
 
-                unique_filename = str(uuid.uuid4())
-                model_filename = f"xgb_model_{unique_filename}.json"
+                tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+                model_filename = tmp.name
+                tmp.close()
                 model.save_model(model_filename)
 
                # Load the model data
@@ -46,7 +47,12 @@ class gazer:
                     model_data = json.load(file)
                 # Delete it after loading 
                 os.remove(model_filename)
-                self.base_score = np.float64(model_data["learner"]["learner_model_param"]['base_score'])
+                base_score = model_data["learner"]["learner_model_param"]['base_score']
+                if isinstance(base_score, str):
+                    base_score = base_score.replace("[", "").replace("]", "")
+                elif isinstance(base_score, list):
+                    base_score = base_score[0]
+                self.base_score = np.float64(base_score)
                 self.xgb_res = xgb_formatter(model_data, self.max_depth)
                 del model_data
 
@@ -58,7 +64,7 @@ class gazer:
             raise NotImplementedError(f"Model not supported yet. Supported models are: {supported_models_str}")
         
 
-    def loss(self, x, y, y_mean_ori=None, progress_bar=True):
+    def loss(self, x, y, y_mean_ori=None, progress_bar=True, backend="auto"):
         """
         Parameters
         -x: x
@@ -77,7 +83,7 @@ class gazer:
 
         if isinstance(model, sklearn.tree.DecisionTreeRegressor):
             summary_tree = summarize_tree(model.tree_)
-            loss = loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer)
+            loss = loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, backend=backend)
 
         # GBM 
         elif isinstance(model, sklearn.ensemble.GradientBoostingRegressor):
@@ -99,7 +105,7 @@ class gazer:
                     
                 summary_tree = summarize_tree(ensemble_tree[i, 0].tree_)
                 explainer = shap.TreeExplainer(ensemble_tree[i, 0])
-                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, alpha)
+                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, alpha, backend=backend)
 
         # XGBOOST 
         elif isinstance(model, xgboost.sklearn.XGBRegressor):
@@ -125,7 +131,7 @@ class gazer:
                 explainer = shap.TreeExplainer(xgb_booster[i])
                 
                 # learning rate is different
-                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1)
+                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
 
         # LightGBM
         elif isinstance(model, lightgbm.sklearn.LGBMRegressor):
@@ -148,12 +154,12 @@ class gazer:
                 explainer = shap.TreeExplainer(lgb_shap_res[i])
                 
                 # learning rate is different
-                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1)
+                loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
 
         return loss
     
 
-    def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None, random_state=42, progress_bar=True):
+    def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None, random_state=42, progress_bar=True, backend="auto"):
         """
         Parameters
         -x: the original x
@@ -197,14 +203,14 @@ class gazer:
         sst = np.sum((y - y_mean_ori) ** 2)
         
         if ncore==1:
-            loss = self.loss(x, y, y_mean_ori=y_mean_ori, progress_bar=progress_bar)
+            loss = self.loss(x, y, y_mean_ori=y_mean_ori, progress_bar=progress_bar, backend=backend)
         else:
             x_chunks = divide_chunks(x, ncore)
             y_chunks = divide_chunks(y, ncore)
 
             with ProcessPoolExecutor(max_workers=ncore) as executor:
                 # Submit all chunks for processing
-                futures = [executor.submit(self.loss, x_chunks[i], y_chunks[i], y_mean_ori, False) for i in range(ncore)]
+                futures = [executor.submit(self.loss, x_chunks[i], y_chunks[i], y_mean_ori, False, backend) for i in range(ncore)]
 
                 # Assign progress bar to a variable
                 iterator = tqdm(futures, desc="Processing", total=len(futures)) if progress_bar else futures

@@ -1,4 +1,25 @@
-from setuptools import setup, find_packages
+import numpy as np
+from setuptools import Extension, setup, find_packages
+from setuptools.command.build_ext import build_ext
+
+
+class BuildExt(build_ext):
+    def build_extensions(self):
+        opts = {
+            "msvc": ["/O2", "/std:c++17"],
+            "unix": ["-O3", "-std=c++17"],
+        }
+        for ext in self.extensions:
+            ext.extra_compile_args = opts.get(self.compiler.compiler_type, [])
+        super().build_extensions()
+
+
+qshap_cpp = Extension(
+    "qshap._qshap_cpp",
+    sources=["qshap/_qshap_cpp.cpp"],
+    include_dirs=[np.get_include()],
+    language="c++",
+)
 
 setup(
     name='qshap',
@@ -10,6 +31,8 @@ setup(
     author_email='jiang548@purdue.edu, zdb969@hs.uci.edu',
     license="GPL-2.0",
     packages=find_packages(),
+    ext_modules=[qshap_cpp],
+    cmdclass={"build_ext": BuildExt},
     url="https://github.com/catstats/Q-SHAP",
     setup_requires=['numpy'],
     install_requires=['numpy', 'scikit-learn',  'shap', 'numba', 'ipywidgets', 'pandas', 'matplotlib'],

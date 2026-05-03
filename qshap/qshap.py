@@ -1,8 +1,16 @@
 import numpy as np
 from numba import njit
 #import cProfile  
-from numba import complex128, int32
-from qshap.utils import inv_binom_coef, complex_v_invc_degree, store_complex_v_invc, complex_dot_v2, weight, store_complex_root
+from numba import complex128
+from qshap._backend import (
+    as_2d_float64,
+    as_t0_matrix,
+    as_target_vector,
+    loss_treeshap_cpp,
+    should_use_cpp,
+    t2_cpp,
+)
+from qshap.utils import complex_dot_v2, weight
 
 
 @njit
@@ -41,7 +49,7 @@ def T2_sample(i, w_matrix, w_ind, init_prediction, store_v_invc, store_z, shap_v
                     shap_value[i, j] += (w_matrix[l1, j] * w_matrix[l2, j] - 1) * init_prediction_product * complex_dot_v2(tmp_p_z, v_invc, n12)
 
                     
-def T2(x, summary_tree, store_v_invc, store_z, parallel = True):
+def T2(x, summary_tree, store_v_invc, store_z, parallel = True, backend="auto"):
     """
     Calculate the second order treeshap value
     
@@ -52,7 +60,10 @@ def T2(x, summary_tree, store_v_invc, store_z, parallel = True):
     Return:
     treeshap value for the sample
     """
-    
+    x = as_2d_float64(x)
+    if should_use_cpp(backend):
+        return t2_cpp(x, summary_tree, store_v_invc, store_z)
+
     init_prediction = summary_tree.init_prediction[summary_tree.children_left < 0]
     
     shap_value = np.zeros_like(x)
@@ -68,7 +79,7 @@ def T2(x, summary_tree, store_v_invc, store_z, parallel = True):
     return shap_value
 
 
-def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning_rate=1):
+def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning_rate=1, backend="auto"):
     """
     Explain l2 loss for every sample
     
@@ -85,9 +96,17 @@ def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning
     loss treeshap for x
     """
 
-    square_treeshap_x = T2(x, summary_tree, store_v_invc, store_z) * learning_rate ** 2 
+    x = as_2d_float64(x)
+    y = as_target_vector(y, x.shape[0])
+
     # direct call from shap
-    T0_x = explainer.shap_values(x) * learning_rate 
+    T0_x = as_t0_matrix(explainer.shap_values(x))
+
+    if should_use_cpp(backend):
+        return loss_treeshap_cpp(x, y, summary_tree, store_v_invc, store_z, T0_x, learning_rate)
+
+    square_treeshap_x = T2(x, summary_tree, store_v_invc, store_z, backend="numba") * learning_rate ** 2
+    T0_x = T0_x * learning_rate
     res = square_treeshap_x - 2 * (y * T0_x.T).T
     return res
 
@@ -137,4 +156,3 @@ def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning
 #     T0_x = explainer.shap_values(x) * learning_rate 
 #     res = square_treeshap_x - 2 * (y * T0_x.T).T
 #     return res
-
