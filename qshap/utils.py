@@ -308,10 +308,18 @@ def xgb_formatter(model_data, max_depth):
     xgb_tree = []
 
     for tree in trees_data:
+        # XGBoost routes left when x < split_condition, while qshap's shared
+        # traversal uses x <= threshold. Nudge finite thresholds down by one
+        # representable float so equality follows XGBoost's right branch.
+        threshold = np.asarray(tree["split_conditions"], dtype=np.float64)
+        finite_threshold = np.isfinite(threshold)
+        threshold = threshold.copy()
+        threshold[finite_threshold] = np.nextafter(threshold[finite_threshold], -np.inf)
+
         xgb_tree.append(simple_tree(np.array(tree["left_children"]),
                                     np.array(tree["right_children"]), 
                                     np.array(tree["split_indices"]),
-                                    np.array(tree["split_conditions"]),
+                                    threshold,
                                     max_depth, 
                                     np.array(tree["sum_hessian"]), 
                                     np.array(tree["base_weights"]), 
