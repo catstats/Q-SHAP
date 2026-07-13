@@ -26,9 +26,15 @@ pip install "qshap[catboost]"
 pip install "qshap[all]"
 ```
 
-Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
-when available. To force the original numba implementation for comparison or
-debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
+Q-SHAP automatically uses an exact moment-propagation backend when every split
+feature occurs at most once in a tree. For a tree with $L$ leaves and depth
+$D$, this read-once fast path costs $O(LD)$ per explained row: it performs two
+linear tree passes at each of $D$ Gauss-Legendre nodes. Trees containing a
+repeated split feature retain the general leaf-pair backend.
+
+The compiled C++ backend is used for the general case when available. To force
+the original numba leaf-pair implementation for comparison or debugging, pass
+`backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
 
 ## Imports
 
@@ -139,7 +145,6 @@ numpages = {17},
 location = {Rio de Janeiro, Brazil},
 series = {UAI '25}
 }
-
 ```
 
 ## Reference
