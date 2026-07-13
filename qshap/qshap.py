@@ -10,6 +10,7 @@ from qshap._backend import (
     should_use_cpp,
     t2_cpp,
 )
+from qshap._moment import is_read_once_tree, t2_moment
 from qshap.utils import complex_dot_v2, weight
 
 
@@ -59,13 +60,21 @@ def T2(x, summary_tree, store_v_invc, store_z, parallel = True, backend="auto"):
     Parameters:
     -x: sample to be explained
     -summary_tree: summary tree
-    -backend: "auto" uses the C++ backend when available; "numba" uses the
-     readable Python/numba reference implementation.
+    -backend: "auto" uses the exact O(LD) moment algorithm for globally
+     read-once trees, then the C++ backend when available; "numba" uses the
+     readable Python/numba leaf-pair reference implementation.
     
     Return:
     treeshap value for the sample
     """
     x = as_2d_float64(x)
+
+    # Every split feature occurs once, so the two child subtrees have disjoint
+    # coalition variables. First and second moments can then be propagated
+    # locally and integrated exactly with D-point Gauss-Legendre quadrature.
+    if backend == "auto" and is_read_once_tree(summary_tree):
+        return t2_moment(x, summary_tree)
+
     if should_use_cpp(backend):
         return t2_cpp(x, summary_tree, store_v_invc, store_z)
 
@@ -107,10 +116,13 @@ def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning
     # direct call from shap
     T0_x = as_t0_matrix(explainer.shap_values(x))
 
-    if should_use_cpp(backend):
+    if backend == "auto" and is_read_once_tree(summary_tree):
+        square_treeshap_x = t2_moment(x, summary_tree) * learning_rate ** 2
+    elif should_use_cpp(backend):
         return loss_treeshap_cpp(x, y, summary_tree, store_v_invc, store_z, T0_x, learning_rate)
+    else:
+        square_treeshap_x = T2(x, summary_tree, store_v_invc, store_z, backend="numba") * learning_rate ** 2
 
-    square_treeshap_x = T2(x, summary_tree, store_v_invc, store_z, backend="numba") * learning_rate ** 2
     T0_x = T0_x * learning_rate
     res = square_treeshap_x - 2 * (y * T0_x.T).T
     return res
@@ -119,9 +131,9 @@ def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning
 # def loss_treeshap_parallel(x, y, summary_tree, store_v_invc, store_z, explainer, learning_rate=1, ncore=-1):
 #     """
 #     Explain l2 loss for every sample
-    
+#     
 #         Explain l2 loss for every sample
-    
+#     
 #     Parameters:
 #     -x: samples
 #     -y: y corresponding to x
@@ -131,7 +143,7 @@ def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning
 #     -explainer: explainer from shap
 #     -learning_rate: learning_rate if it's a tree from scikit learn GBM, learning_rate for decision tree and xgboost should be 1. 
 #     -ncore: number of cores to use, with default value -1 to utilize all the cores
-    
+#     
 #     Return:
 #     loss treeshap for x
 #     """
@@ -139,7 +151,7 @@ def loss_treeshap(x, y, summary_tree, store_v_invc, store_z, explainer, learning
 #     if ncore == -1:
 #         ncore = os.cpu_count()
 #     ncore = min(max_core, ncore)
-    
+#     
 #     if ncore==1:
 #         square_treeshap_x = T2(x, summary_tree, store_v_invc, store_z) * learning_rate ** 2 
 #     else:
