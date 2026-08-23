@@ -1,9 +1,12 @@
 import numpy as np
+import warnings
 
+_cpp_import_error = None
 try:
     from qshap import _qshap_cpp
-except Exception:  # pragma: no cover - exercised when extension is not built
+except ImportError as exc:  # pragma: no cover - depends on the local wheel/build
     _qshap_cpp = None
+    _cpp_import_error = exc
 
 
 def cpp_available():
@@ -11,17 +14,25 @@ def cpp_available():
 
 
 def should_use_cpp(backend):
+    """Resolve a backend request without hiding extension import failures."""
     if backend not in ("auto", "cpp", "numba"):
         raise ValueError("backend must be one of 'auto', 'cpp', or 'numba'")
     if backend == "numba":
         return False
     if _qshap_cpp is None:
+        message = (
+            "The qshap C++ backend is not available. "
+            "Build it with `python setup.py build_ext --inplace`."
+        )
+        if _cpp_import_error is not None:
+            message += f" Import failed with: {_cpp_import_error}"
         if backend == "cpp":
-            raise RuntimeError(
-                "The qshap C++ backend is not available. "
-                "Build it with `python setup.py build_ext --inplace`, "
-                "or use backend='numba'."
-            )
+            raise RuntimeError(message) from _cpp_import_error
+        warnings.warn(
+            f"{message} Falling back to backend='numba'.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
         return False
     return True
 
@@ -54,6 +65,9 @@ def as_t0_matrix(t0_x):
 
 
 def summary_tree_arrays(summary_tree):
+    default_left = summary_tree.default_left
+    if default_left is None:
+        default_left = np.zeros(len(summary_tree.children_left), dtype=np.int64)
     return (
         np.asarray(summary_tree.children_left, dtype=np.int64),
         np.asarray(summary_tree.children_right, dtype=np.int64),
@@ -62,6 +76,8 @@ def summary_tree_arrays(summary_tree):
         np.asarray(summary_tree.threshold, dtype=np.float64),
         np.asarray(summary_tree.sample_weight, dtype=np.float64),
         np.asarray(summary_tree.init_prediction, dtype=np.float64),
+        np.asarray(default_left, dtype=np.int64),
+        np.asarray([bool(summary_tree.xgboost_split)], dtype=np.int64),
     )
 
 
@@ -83,4 +99,17 @@ def loss_treeshap_cpp(x, y, summary_tree, store_v_invc, store_z, t0_x, learning_
         np.asarray(store_z, dtype=np.complex128, order="C"),
         t0_x,
         learning_rate,
+    )
+
+
+def catboost_qshap_r2_fast_cpp(
+    X, y, catboost_trees, bias, compute_sd=True, return_prediction=False
+):
+    return _qshap_cpp.catboost_qshap_r2_fast(
+        np.asarray(X, dtype=np.float64, order="C"),
+        np.asarray(y, dtype=np.float64),
+        catboost_trees,
+        float(bias),
+        bool(compute_sd),
+        bool(return_prediction),
     )

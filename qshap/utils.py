@@ -128,6 +128,8 @@ class simple_tree:
     n_node_samples: np.ndarray
     value: np.ndarray
     node_count: int
+    default_left: object = None
+    xgboost_split: bool = False
 
 
 @dataclass(frozen=True)
@@ -159,7 +161,21 @@ class tree_summary:
     value: np.ndarray
     n_node_samples: np.ndarray
     node_count: int
+    default_left: object = None
+    xgboost_split: bool = False
     
+
+def _as_single_output_tree_values(value):
+    values = np.asarray(value, dtype=np.float64)
+    if values.ndim == 1:
+        return values
+
+    squeezed = np.squeeze(values)
+    if squeezed.ndim == 1 and squeezed.shape[0] == values.shape[0]:
+        return np.ascontiguousarray(squeezed, dtype=np.float64)
+
+    raise ValueError("Only single-output regression trees are supported")
+
 
     
 def summarize_tree(tree):
@@ -176,17 +192,25 @@ def summarize_tree(tree):
     """
     sample_weight = np.ones_like(tree.threshold)
     init_prediction = np.zeros_like(tree.threshold)
+    tree_value = _as_single_output_tree_values(tree.value)
+    default_left = getattr(tree, "default_left", None)
+    if default_left is None:
+        default_left = np.zeros(tree.node_count, dtype=np.bool_)
+    else:
+        default_left = np.asarray(default_left, dtype=np.bool_)
+    xgboost_split = bool(getattr(tree, "xgboost_split", False))
     n = tree.n_node_samples[0]
     
     def traversal_summarize_tree(v):
         v_l, v_r = tree.children_left[v], tree.children_right[v]
-        n_v, n_l, n_r = tree.n_node_samples[v], tree.n_node_samples[v_l], tree.n_node_samples[v_r]
+        n_v = tree.n_node_samples[v]
 
-        init_prediction[v] = tree.value[v] * n_v/n
+        init_prediction[v] = tree_value[v] * n_v/n
         
         if v_l < 0:  #leaf
             return
         else:
+            n_l, n_r = tree.n_node_samples[v_l], tree.n_node_samples[v_r]
             sample_weight[v_l], sample_weight[v_r] = n_v/n_l, n_v/n_r
             traversal_summarize_tree(v_l)
             traversal_summarize_tree(v_r)
@@ -196,10 +220,17 @@ def summarize_tree(tree):
     
     feature_uniq = np.unique(tree.feature[tree.feature >= 0])
    
-    return tree_summary(tree.children_left, tree.children_right, tree.feature, feature_uniq, tree.threshold, tree.max_depth, sample_weight, init_prediction, tree.value, tree.n_node_samples, tree.node_count)
+    return tree_summary(
+        tree.children_left, tree.children_right, tree.feature, feature_uniq,
+        tree.threshold, tree.max_depth, sample_weight, init_prediction,
+        tree_value, tree.n_node_samples, tree.node_count, default_left,
+        xgboost_split,
+    )
 
 
-def traversal_weight(x, v, w, children_left, children_right, feature, threshold, sample_weight, leaf_ind, w_res, w_ind, depth, met_feature):
+def traversal_weight(x, v, w, children_left, children_right, feature, threshold,
+                     default_left, xgboost_split, sample_weight, leaf_ind,
+                     w_res, w_ind, depth, met_feature):
     """
     Calculate the weight in the treeSHAP. 
 
@@ -250,15 +281,27 @@ def traversal_weight(x, v, w, children_left, children_right, feature, threshold,
 
         w_r = w.copy()
 
-        if x[split_feature] <= split_threshold:
+        split_value = x[split_feature]
+        if np.isnan(split_value):
+            go_left = default_left[v]
+        elif xgboost_split:
+            go_left = np.float32(split_value) < np.float32(split_threshold)
+        else:
+            go_left = split_value <= split_threshold
+
+        if go_left:
             w[depth] = w[former_depth] * sample_weight[v_l]
             w_r[depth] = 0
         else:
             w_r[depth] = w_r[former_depth] * sample_weight[v_r]
             w[depth] = 0 
 
-        traversal_weight(x, v_l, w, children_left, children_right, feature, threshold, sample_weight, leaf_ind, w_res, w_ind, depth+1, met_feature) 
-        traversal_weight(x, v_r, w_r, children_left, children_right, feature, threshold, sample_weight, leaf_ind, w_res, w_ind, depth+1, met_feature)
+        traversal_weight(x, v_l, w, children_left, children_right, feature,
+                         threshold, default_left, xgboost_split, sample_weight,
+                         leaf_ind, w_res, w_ind, depth+1, met_feature)
+        traversal_weight(x, v_r, w_r, children_left, children_right, feature,
+                         threshold, default_left, xgboost_split, sample_weight,
+                         leaf_ind, w_res, w_ind, depth+1, met_feature)
 
         
 def weight(x, summary_tree):
@@ -284,7 +327,12 @@ def weight(x, summary_tree):
     met_feature = np.full(d, -1, dtype=int)
     
     # begin traversal from root
-    traversal_weight(x, 0, w, summary_tree.children_left, summary_tree.children_right, summary_tree.feature, summary_tree.threshold, summary_tree.sample_weight, leaf_ind, w_res, w_ind, 0, met_feature)
+    traversal_weight(
+        x, 0, w, summary_tree.children_left, summary_tree.children_right,
+        summary_tree.feature, summary_tree.threshold, summary_tree.default_left,
+        summary_tree.xgboost_split, summary_tree.sample_weight, leaf_ind,
+        w_res, w_ind, 0, met_feature,
+    )
     return w_res, w_ind
 
 
@@ -308,13 +356,16 @@ def xgb_formatter(model_data, max_depth):
     xgb_tree = []
 
     for tree in trees_data:
-        # XGBoost routes left when x < split_condition, while qshap's shared
-        # traversal uses x <= threshold. Nudge finite thresholds down by one
-        # representable float so equality follows XGBoost's right branch.
-        threshold = np.asarray(tree["split_conditions"], dtype=np.float64)
-        finite_threshold = np.isfinite(threshold)
-        threshold = threshold.copy()
-        threshold[finite_threshold] = np.nextafter(threshold[finite_threshold], -np.inf)
+        # XGBoost stores and evaluates numeric features as float32, routes
+        # equality to the right, and learns a default direction for missing
+        # values. Keep the raw float32 thresholds and routing flags so the
+        # shared traversal can reproduce those decisions exactly.
+        threshold = np.asarray(
+            tree["split_conditions"], dtype=np.float32
+        ).astype(np.float64)
+        default_left = np.asarray(
+            tree.get("default_left", np.zeros(len(threshold))), dtype=np.bool_
+        )
 
         xgb_tree.append(simple_tree(np.array(tree["left_children"]),
                                     np.array(tree["right_children"]), 
@@ -322,8 +373,10 @@ def xgb_formatter(model_data, max_depth):
                                     threshold,
                                     max_depth, 
                                     np.array(tree["sum_hessian"]), 
-                                    np.array(tree["base_weights"]), 
-                                    int(tree["tree_param"]["num_nodes"])))
+                                    np.array(tree["base_weights"]),
+                                    int(tree["tree_param"]["num_nodes"]),
+                                    default_left,
+                                    True))
 
     return(xgb_tree)
 
@@ -343,6 +396,28 @@ def lgb_formatter(model_data, max_depth):
 
     lgb_tree = []
 
+    def _is_missing(value):
+        return value is None or (isinstance(value, (float, np.floating)) and np.isnan(value))
+
+    def _parse_split_feature(value):
+        if _is_missing(value):
+            return -1
+        if isinstance(value, (int, np.integer)):
+            return int(value)
+        if isinstance(value, (float, np.floating)):
+            return -1 if np.isnan(value) else int(value)
+        value = str(value)
+        if value.startswith("Column_"):
+            return int(value.replace("Column_", ""))
+        if value.startswith("feature_"):
+            return int(value.replace("feature_", ""))
+        return int(value)
+
+    def _map_child(value, node_mapping):
+        if _is_missing(value):
+            return -1
+        return node_mapping[value]
+
     for tree_id in range(ntree):
         
         tree = model_data[model_data['tree_index']==tree_id] 
@@ -350,20 +425,49 @@ def lgb_formatter(model_data, max_depth):
         node_mapping = {original: idx for idx, original in enumerate(tree['node_index'])}
         node_mapping[None] = - 1
 
-        split_feature = np.array([int(f.replace("Column_", "")) if f is not None else -1 for f in tree['split_feature']])
+        split_feature = np.array(
+            [_parse_split_feature(f) for f in tree['split_feature']],
+            dtype=np.int64,
+        )
         
-        lgb_tree.append(simple_tree(np.array(tree['left_child'].map(node_mapping)),
-                                    np.array(tree['right_child'].map(node_mapping)), 
+        lgb_tree.append(simple_tree(np.array([_map_child(v, node_mapping) for v in tree['left_child']], dtype=np.int64),
+                                    np.array([_map_child(v, node_mapping) for v in tree['right_child']], dtype=np.int64),
                                     split_feature,
-                                    np.array(tree["threshold"]),
+                                    np.nan_to_num(np.array(tree["threshold"], dtype=np.float64), nan=0.0),
                                     max_depth, 
-                                    np.array(tree["count"]), 
-                                    np.array(tree["value"]), 
-                                    int(tree.shape[0])))
+                                    np.array(tree["count"], dtype=np.float64),
+                                    np.array(tree["value"], dtype=np.float64),
+                                    int(tree.shape[0]),
+                                    np.array(tree["missing_direction"] == "left", dtype=np.bool_)))
     return(lgb_tree)
 
 
-def _catboost_split_feature(split_info):
+def _catboost_float_feature_metadata(model_data):
+    """Return CatBoost float-feature index mappings and missing directions."""
+    flat_feature_index = {}
+    default_left = {}
+    features_info = model_data.get("features_info")
+    if not isinstance(features_info, dict) or "float_features" not in features_info:
+        return None, None
+    float_features = features_info.get("float_features") or []
+
+    for position, feature_info in enumerate(float_features):
+        feature_index = int(feature_info.get("feature_index", position))
+        flat_feature_index[feature_index] = int(
+            feature_info.get("flat_feature_index", feature_index)
+        )
+        # CatBoost evaluates FloatFeature splits as ``value > border``.
+        # AsFalse (nan_mode=Min) therefore routes missing values left, while
+        # AsTrue (nan_mode=Max) routes them right.  AsIs is emitted when the
+        # training feature had no missing values and follows the ordinary
+        # false/left result of a NaN comparison.
+        default_left[feature_index] = (
+            feature_info.get("nan_value_treatment", "AsIs") != "AsTrue"
+        )
+    return flat_feature_index, default_left
+
+
+def _catboost_split_feature(split_info, flat_feature_index=None):
     split_type = split_info.get("split_type", "FloatFeature")
     if split_type != "FloatFeature":
         raise NotImplementedError(
@@ -373,10 +477,18 @@ def _catboost_split_feature(split_info):
         )
 
     if "float_feature_index" in split_info:
-        return int(split_info["float_feature_index"])
-    if "split_index" in split_info:
-        return int(split_info["split_index"])
-    raise ValueError("Cannot find feature index in CatBoost split info")
+        feature_index = int(split_info["float_feature_index"])
+        if flat_feature_index is not None:
+            if feature_index not in flat_feature_index:
+                raise ValueError(
+                    "CatBoost split references float_feature_index "
+                    f"{feature_index}, but features_info has no matching feature"
+                )
+            return int(flat_feature_index[feature_index])
+        return feature_index
+    if "flat_feature_index" in split_info:
+        return int(split_info["flat_feature_index"])
+    raise ValueError("Cannot find float feature index in CatBoost split info")
 
 
 def _catboost_split_threshold(split_info):
@@ -387,7 +499,25 @@ def _catboost_split_threshold(split_info):
     raise ValueError("Cannot find threshold/border in CatBoost split info")
 
 
-def catboost_oblivious_to_simple(tree_data, scale=1.0):
+def _catboost_split_default_left(split_info, default_left_by_feature=None):
+    feature_index = int(split_info.get("float_feature_index", -1))
+    if default_left_by_feature is None:
+        return True
+    return bool(default_left_by_feature.get(feature_index, True))
+
+
+def _catboost_zero_cover_floor(leaf_weights):
+    positive_total = float(np.sum(leaf_weights[leaf_weights > 0.0]))
+    floor = positive_total * 1e-12
+    return floor if np.isfinite(floor) and floor > 0.0 else 1e-12
+
+
+def catboost_oblivious_to_simple(
+    tree_data,
+    scale=1.0,
+    flat_feature_index=None,
+    default_left_by_feature=None,
+):
     """
     Convert one CatBoost oblivious tree from JSON into the simple_tree format.
 
@@ -402,12 +532,10 @@ def catboost_oblivious_to_simple(tree_data, scale=1.0):
         dtype=np.float64,
     )
 
-    empty_mask = leaf_weights == 0
+    empty_mask = leaf_weights <= 0.0
     if np.any(empty_mask):
         leaf_weights = leaf_weights.copy()
-        leaf_values = leaf_values.copy()
-        leaf_weights[empty_mask] = 1.0
-        leaf_values[empty_mask] = 0.0
+        leaf_weights[empty_mask] = _catboost_zero_cover_floor(leaf_weights)
 
     depth = len(splits)
     if depth == 0:
@@ -420,6 +548,7 @@ def catboost_oblivious_to_simple(tree_data, scale=1.0):
             np.array([leaf_weights[0]], dtype=np.float64),
             np.array([leaf_values[0]], dtype=np.float64),
             1,
+            np.array([False], dtype=np.bool_),
         )
 
     splits_topdown = list(reversed(splits))
@@ -427,31 +556,156 @@ def catboost_oblivious_to_simple(tree_data, scale=1.0):
     num_internal = num_leaves - 1
     total_nodes = (1 << (depth + 1)) - 1
 
+    # Symmetric trees use one split per depth. Validate and map that split
+    # once, then expand complete BFS levels with NumPy instead of repeating
+    # Python metadata work for all 2^depth - 1 internal nodes.
+    level_features = np.asarray(
+        [
+            _catboost_split_feature(split_info, flat_feature_index)
+            for split_info in splits_topdown
+        ],
+        dtype=np.int64,
+    )
+    level_thresholds = np.asarray(
+        [_catboost_split_threshold(split_info) for split_info in splits_topdown],
+        dtype=np.float64,
+    )
+    level_default_left = np.asarray(
+        [
+            _catboost_split_default_left(split_info, default_left_by_feature)
+            for split_info in splits_topdown
+        ],
+        dtype=np.bool_,
+    )
+
     children_left = np.full(total_nodes, -1, dtype=np.int64)
     children_right = np.full(total_nodes, -1, dtype=np.int64)
     feature = np.full(total_nodes, -1, dtype=np.int64)
     threshold = np.zeros(total_nodes, dtype=np.float64)
     value = np.zeros(total_nodes, dtype=np.float64)
     n_node_samples = np.zeros(total_nodes, dtype=np.float64)
+    default_left = np.zeros(total_nodes, dtype=np.bool_)
 
-    for node in range(num_internal):
-        level = (node + 1).bit_length() - 1
-        split_info = splits_topdown[level]
-        children_left[node] = 2 * node + 1
-        children_right[node] = 2 * node + 2
-        feature[node] = _catboost_split_feature(split_info)
-        threshold[node] = _catboost_split_threshold(split_info)
+    internal_nodes = np.arange(num_internal, dtype=np.int64)
+    level_counts = np.left_shift(1, np.arange(depth, dtype=np.int64))
+    children_left[:num_internal] = 2 * internal_nodes + 1
+    children_right[:num_internal] = 2 * internal_nodes + 2
+    feature[:num_internal] = np.repeat(level_features, level_counts)
+    threshold[:num_internal] = np.repeat(level_thresholds, level_counts)
+    default_left[:num_internal] = np.repeat(level_default_left, level_counts)
 
     if leaf_values.shape[0] != num_leaves:
         raise ValueError("CatBoost leaf_values length does not match tree depth")
 
-    for leaf_pos in range(num_leaves):
-        node = num_internal + leaf_pos
-        value[node] = leaf_values[leaf_pos]
-        n_node_samples[node] = leaf_weights[leaf_pos]
+    leaf_slice = slice(num_internal, total_nodes)
+    value[leaf_slice] = leaf_values
+    n_node_samples[leaf_slice] = leaf_weights
 
-    for node in range(num_internal - 1, -1, -1):
+    for level in range(depth - 1, -1, -1):
+        nodes = np.arange((1 << level) - 1, (1 << (level + 1)) - 1)
+        left = 2 * nodes + 1
+        right = left + 1
+        nl = n_node_samples[left]
+        nr = n_node_samples[right]
+        total = nl + nr
+        n_node_samples[nodes] = total
+        value[nodes] = (nl * value[left] + nr * value[right]) / total
+
+    return simple_tree(
+        children_left,
+        children_right,
+        feature,
+        threshold,
+        depth,
+        n_node_samples,
+        value,
+        total_nodes,
+        default_left,
+    )
+
+
+def catboost_non_oblivious_to_simple(
+    tree_data,
+    scale=1.0,
+    flat_feature_index=None,
+    default_left_by_feature=None,
+):
+    """Convert one nested Depthwise/Lossguide CatBoost tree to ``simple_tree``."""
+    nodes = []
+    depths = []
+
+    def append_node(node_data, depth):
+        if not isinstance(node_data, dict):
+            raise ValueError("CatBoost tree nodes must be JSON objects")
+
+        node = len(nodes)
+        nodes.append(node_data)
+        depths.append(depth)
+
+        is_leaf = "value" in node_data and "split" not in node_data
+        if is_leaf:
+            return node
+        if not all(key in node_data for key in ("split", "left", "right")):
+            raise ValueError(
+                "Malformed non-symmetric CatBoost tree: expected split, left, and right"
+            )
+
+        left = append_node(node_data["left"], depth + 1)
+        right = append_node(node_data["right"], depth + 1)
+        node_data = dict(node_data)
+        node_data["_qshap_left"] = left
+        node_data["_qshap_right"] = right
+        nodes[node] = node_data
+        return node
+
+    append_node(tree_data, 0)
+    node_count = len(nodes)
+    raw_leaf_weights = np.asarray(
+        [
+            float(node_data.get("weight", 1.0))
+            for node_data in nodes
+            if "_qshap_left" not in node_data
+        ],
+        dtype=np.float64,
+    )
+    zero_cover_floor = _catboost_zero_cover_floor(raw_leaf_weights)
+    children_left = np.full(node_count, -1, dtype=np.int64)
+    children_right = np.full(node_count, -1, dtype=np.int64)
+    feature = np.full(node_count, -1, dtype=np.int64)
+    threshold = np.zeros(node_count, dtype=np.float64)
+    value = np.zeros(node_count, dtype=np.float64)
+    n_node_samples = np.zeros(node_count, dtype=np.float64)
+    default_left = np.zeros(node_count, dtype=np.bool_)
+
+    for node, node_data in enumerate(nodes):
+        if "_qshap_left" not in node_data:
+            leaf_value = np.asarray(node_data.get("value"), dtype=np.float64)
+            if leaf_value.ndim != 0:
+                raise NotImplementedError(
+                    "Only single-output CatBoost regression trees are supported"
+                )
+            value[node] = float(leaf_value) * scale
+            # Empty CatBoost leaves need a positive cover for TreeSHAP's
+            # conditional expectations.  Keep their prediction unchanged.
+            leaf_weight = float(node_data.get("weight", 1.0))
+            n_node_samples[node] = (
+                leaf_weight if leaf_weight > 0.0 else zero_cover_floor
+            )
+            continue
+
+        split_info = node_data["split"]
+        children_left[node] = int(node_data["_qshap_left"])
+        children_right[node] = int(node_data["_qshap_right"])
+        feature[node] = _catboost_split_feature(split_info, flat_feature_index)
+        threshold[node] = _catboost_split_threshold(split_info)
+        default_left[node] = _catboost_split_default_left(
+            split_info, default_left_by_feature
+        )
+
+    for node in range(node_count - 1, -1, -1):
         left = children_left[node]
+        if left < 0:
+            continue
         right = children_right[node]
         nl = n_node_samples[left]
         nr = n_node_samples[right]
@@ -464,10 +718,11 @@ def catboost_oblivious_to_simple(tree_data, scale=1.0):
         children_right,
         feature,
         threshold,
-        depth,
+        max(depths, default=0),
         n_node_samples,
         value,
-        total_nodes,
+        node_count,
+        default_left,
     )
 
 
@@ -487,18 +742,44 @@ def catboost_formatter(model_data):
         scale = float(scale_and_bias[0])
         raw_bias = scale_and_bias[1]
         if isinstance(raw_bias, list):
+            if len(raw_bias) > 1:
+                raise NotImplementedError(
+                    "Only single-output CatBoost regression models are supported"
+                )
             bias = float(raw_bias[0]) if raw_bias else 0.0
         else:
             bias = float(raw_bias)
 
+    flat_feature_index, default_left_by_feature = _catboost_float_feature_metadata(
+        model_data
+    )
+
     trees_data = model_data.get("oblivious_trees")
-    if trees_data is None:
+    if trees_data is not None:
+        trees = [
+            catboost_oblivious_to_simple(
+                tree,
+                scale=scale,
+                flat_feature_index=flat_feature_index,
+                default_left_by_feature=default_left_by_feature,
+            )
+            for tree in trees_data
+        ]
+    elif model_data.get("trees") is not None:
+        trees = [
+            catboost_non_oblivious_to_simple(
+                tree,
+                scale=scale,
+                flat_feature_index=flat_feature_index,
+                default_left_by_feature=default_left_by_feature,
+            )
+            for tree in model_data["trees"]
+        ]
+    else:
         raise ValueError(
-            "Could not find oblivious_trees in CatBoost JSON. "
-            "Only symmetric/oblivious CatBoost trees are currently supported."
+            "Could not find CatBoost trees in JSON (expected oblivious_trees or trees)"
         )
 
-    trees = [catboost_oblivious_to_simple(tree, scale=scale) for tree in trees_data]
     max_depth = max((tree.max_depth for tree in trees), default=0)
     return trees, bias, max_depth
 
@@ -520,7 +801,7 @@ def simple_trees_to_shap_models(formatter):
         tree = formatter[i]
         children_left = tree.children_left
         children_right = tree.children_right
-        children_default = children_right.copy()  # because sklearn does not use missing values
+        children_default = np.where(tree.default_left, children_left, children_right)
         features = tree.feature
         thresholds = tree.threshold
         values = tree.value.reshape(tree.value.shape[0], 1)

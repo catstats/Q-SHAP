@@ -2,6 +2,25 @@
 
 The author somehow decides to maintain a changelog starting from version 0.3.3 !!
 
+## [2.0.0] - 2026-08-22
+
+### Added
+
+- Return `local_rsq` alongside the unchanged raw `loss` matrix when local
+  output is requested. Its column sums reproduce the global feature-specific
+  `rsq` decomposition.
+- Add an observation-level contribution heatmap with automatic extreme-row
+  selection, explicit sample selection, a separated Total column, and
+  percentage labels on the local R-squared scale.
+
+## [0.3.9] - 2026-08-01
+
+### Fixed
+
+- Return generalized correlations from `gazer.gcorr()` and preserve plotting options in `vis.gcorr()`.
+- Validate and cap `ncore` before splitting samples for multiprocessing.
+- Preserve compiled-backend import failures and report automatic fallback to the numba backend.
+
 ## [0.3.8] - 2026-05-03
 
 ### Added

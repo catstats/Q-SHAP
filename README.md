@@ -26,6 +26,10 @@ pip install "qshap[catboost]"
 pip install "qshap[all]"
 ```
 
+Q-SHAP 2.0.0 supports Python 3.9-3.12 and the current NumPy 2.x-compatible
+dependency stack up to `numpy<2.5`. NumPy 2.5 is not enabled yet because the
+current numba/shap stack does not support it.
+
 Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
 when available. To force the original numba implementation for comparison or
 debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
@@ -74,7 +78,18 @@ model = xgb.XGBRegressor(
 # ---- Obtain feature-specific R^2 using qshap ----
 g = gazer(model)
 
-phi_rsq = g.rsq(x, y)
+# Return the first tree already stored by gazer
+tree = g.get_tree(0)
+print(tree)
+
+# Request the global and observation-level decompositions
+local_result = g.rsq(x, y, local=True)
+phi_rsq = local_result.rsq
+local_loss = local_result.loss
+local_rsq = local_result.local_rsq
+
+# Each column of local_rsq decomposes the corresponding global contribution
+np.testing.assert_allclose(local_rsq.sum(axis=0), phi_rsq)
 
 
 # ---- Visualize top feature-specific R^2 ----
@@ -84,6 +99,14 @@ vis.rsq(
     rotation=30,
     save_name="boston_housing",
     color_map_name="Pastel2"
+)
+
+# Show 20 informative observations, selected from both extremes of row totals
+vis.heatmap(
+    local_result,
+    feature_names=feature_names,
+    n_show=20,
+    save_name="boston_housing_heatmap",
 )
 ```
 
@@ -122,6 +145,13 @@ model = cb.CatBoostRegressor(
 
 phi_rsq = gazer(model).rsq(x, y)
 ```
+
+Numeric CatBoost regressors support all three grow policies. `SymmetricTree`
+uses the specialized cached global backend; `Depthwise` and `Lossguide`
+automatically use the general-tree backend. CatBoost float32 split boundaries
+and `nan_mode` routing are preserved. Models containing categorical
+(`OnlineCtr`) splits are rejected explicitly because those splits cannot be
+represented as raw input-column thresholds.
 
 <p align="center">
   <img width="500" src="./figs/boston_housing.png" />

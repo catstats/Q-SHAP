@@ -3,6 +3,7 @@ import os
 import tempfile
 import warnings
 from concurrent.futures import ProcessPoolExecutor
+from numbers import Integral
 from types import SimpleNamespace
 
 import numpy as np
@@ -11,6 +12,8 @@ import sklearn.ensemble
 import sklearn.tree
 from tqdm import tqdm
 
+from qshap.boosting_importance import fast_catboost_qshap_r2
+from qshap.catboost_backend import catboost_float_features, route_tree_leaf_nodes
 from qshap.qshap import loss_treeshap
 from qshap.utils import (
     catboost_formatter,
@@ -60,6 +63,24 @@ def _supported_models_message():
         "(install with `pip install qshap[lightgbm]`), and CatBoostRegressor "
         "(install with `pip install qshap[catboost]`)."
     )
+
+
+def _resolve_ncore(ncore, n_samples):
+    """Validate a worker request and cap it to useful available workers."""
+    if isinstance(ncore, bool) or not isinstance(ncore, Integral):
+        raise TypeError("ncore must be an integer or -1 to use all available cores")
+    if n_samples < 1:
+        raise ValueError("x must contain at least one sample")
+
+    available_cores = os.cpu_count() or 1
+    if ncore == -1:
+        requested_cores = available_cores
+    elif ncore < 1:
+        raise ValueError("ncore must be a positive integer or -1")
+    else:
+        requested_cores = int(ncore)
+
+    return min(requested_cores, available_cores, n_samples)
 
 
 def _save_model_json(model, *, package_name):
@@ -118,6 +139,7 @@ class gazer:
         elif _is_catboost_regressor(model):
             self.model_kind = "catboost"
             model_data = _save_model_json(model, package_name="catboost")
+            self.catboost_is_symmetric = "oblivious_trees" in model_data
             self.catboost_res, self.base_score, self.max_depth = catboost_formatter(model_data)
             self.catboost_shap_res = simple_trees_to_shap_models(self.catboost_res)
 
@@ -128,6 +150,29 @@ class gazer:
         self.store_v_invc = store_complex_v_invc(self.max_depth * 2)
         self.store_z = store_complex_root(self.max_depth * 2)
         
+    def get_tree(self, tree=0):
+        """Return the low-level fields of a tree already stored by gazer."""
+        if self.model_kind == "sklearn_tree":
+            trees = [self.model.tree_]
+        elif self.model_kind == "sklearn_gbdt":
+            trees = [estimator.tree_ for estimator in self.model.estimators_.ravel()]
+        elif self.model_kind == "xgboost":
+            trees = self.xgb_res
+        elif self.model_kind == "lightgbm":
+            trees = self.lgb_res
+        else:
+            trees = self.catboost_res
+        parsed_tree = trees[tree]
+        fields = (
+            "children_left", "children_right", "feature", "threshold",
+            "max_depth", "n_node_samples", "value", "node_count",
+            "default_left", "xgboost_split",
+        )
+        result = {name: getattr(parsed_tree, name) for name in fields[:8]}
+        result["default_left"] = getattr(parsed_tree, "default_left", None)
+        result["xgboost_split"] = getattr(parsed_tree, "xgboost_split", False)
+        return result
+
 
     def loss(self, x, y, y_mean_ori=None, progress_bar=True, backend="auto"):
         """
@@ -182,21 +227,23 @@ class gazer:
             warnings.filterwarnings("ignore", module="xgb")
 
             loss = np.zeros_like(x, dtype=np.float64)
+            cumulative_prediction = np.full(x.shape[0], self.base_score, dtype=np.float64)
+            xgb_dmatrix = xgboost.DMatrix(x)
             
             iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
 
             for i in iterator:
                 # get summary_tree first 
-                if i==0:
-                    res = y - self.base_score
-                else:
-                    res = y - model.predict(x, iteration_range=(0, i))
+                res = y - cumulative_prediction
                 
                 summary_tree = summarize_tree(xgb_res[i])
-                explainer = shap.TreeExplainer(xgb_booster[i])
+                tree_booster = xgb_booster[i]
+                explainer = shap.TreeExplainer(tree_booster)
                 
                 # learning rate is different
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
+                tree_pred = tree_booster.predict(xgb_dmatrix, output_margin=True) - self.base_score
+                cumulative_prediction += tree_pred
 
         # LightGBM
         elif self.model_kind == "lightgbm":
@@ -205,51 +252,58 @@ class gazer:
             num_tree = model.n_iter_
 
             loss = np.zeros_like(x, dtype=np.float64)
+            cumulative_prediction = np.zeros(x.shape[0], dtype=np.float64)
 
             iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
 
             for i in iterator:
                 # get summary_tree first 
-                if i==0:
-                    res = y 
-                else:
-                    res = y - model.predict(x, num_iteration=i, raw_score=True)
+                res = y - cumulative_prediction
                 
                 summary_tree = summarize_tree(lgb_res[i])
                 explainer = shap.TreeExplainer(lgb_shap_res[i])
                 
                 # learning rate is different
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
+                tree_pred = model.booster_.predict(
+                    x, start_iteration=i, num_iteration=1, raw_score=True
+                )
+                cumulative_prediction += tree_pred
 
         # CatBoost
         elif self.model_kind == "catboost":
+            x = catboost_float_features(x)
             cb_res = self.catboost_res
             cb_shap_res = self.catboost_shap_res
             num_tree = len(cb_res)
 
             loss = np.zeros_like(x, dtype=np.float64)
+            cumulative_prediction = np.full(
+                x.shape[0], self.base_score, dtype=np.float64
+            )
 
             iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
 
             for i in iterator:
-                if i == 0:
-                    res = y - self.base_score
-                else:
-                    res = y - model.predict(x, ntree_end=i)
+                res = y - cumulative_prediction
 
                 summary_tree = summarize_tree(cb_res[i])
                 explainer = shap.TreeExplainer(cb_shap_res[i])
                 loss += loss_treeshap(x, res, summary_tree, store_v_invc, store_z, explainer, 1, backend=backend)
+                leaf_nodes = route_tree_leaf_nodes(x, cb_res[i])
+                cumulative_prediction += cb_res[i].value[leaf_nodes]
 
         return loss
     
 
-    def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None, random_state=42, progress_bar=True, backend="auto"):
+    def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None,
+            random_state=42, progress_bar=True, backend="auto", local=None):
         """
         Parameters
         -x: the original x
         -y: the original y
-        -loss_out: output loss or not
+        -loss_out: output local decompositions or not
+        -local: alias for loss_out; local=True returns rsq, loss, and local_rsq
         -nsample: number of samples to sample from, by default use all samples
         -nfrac: fraction of samples to sample from, by default 1, use all samples
         -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
@@ -259,9 +313,16 @@ class gazer:
          uses the Python/numba reference implementation for understanding the algorithm.
 
         Return
-        Shapley R-squared
+        Shapley R-squared. When local=True (or loss_out=True), returns a
+        namespace containing:
+        -rsq: global feature-specific Shapley contributions to R-squared
+        -loss: raw observation-level contributions to the change in squared loss
+        -local_rsq: observation-level contributions to the global R-squared
+         decomposition, defined as -loss / sum((y - mean(y)) ** 2)
         """ 
 
+        if local is not None:
+            loss_out = bool(local)
         
         if nsample is not None:
             if nsample <=0 or nsample >= x.shape[0]:
@@ -280,14 +341,21 @@ class gazer:
             x = x[sample_ind]
             y = y[sample_ind]
                   
-        max_core = os.cpu_count()
-        if ncore == -1:
-            ncore = os.cpu_count()
-        ncore = min(max_core, ncore)
+        ncore = _resolve_ncore(ncore, len(x))
 
         explainer = self.explainer
         y_mean_ori = np.mean(y)
         sst = np.sum((y - y_mean_ori) ** 2)
+
+        if sst <= 0:
+            raise ValueError("Cannot compute R2 decomposition when y has zero variance")
+
+        if (
+            self.model_kind == "catboost"
+            and self.catboost_is_symmetric
+            and not loss_out
+        ):
+            return fast_catboost_qshap_r2(self, x, y, compute_sd=False)
         
         if ncore==1:
             loss = self.loss(x, y, y_mean_ori=y_mean_ori, progress_bar=progress_bar, backend=backend)
@@ -307,14 +375,16 @@ class gazer:
             
             loss = np.concatenate(results) 
 
-        rsq = 0 - np.sum(loss, axis=0)/sst
+        local_rsq = -loss / sst
+        rsq = np.sum(local_rsq, axis=0)
 
         if loss_out:
-            return SimpleNamespace(rsq=rsq, loss=loss)
+            return SimpleNamespace(rsq=rsq, loss=loss, local_rsq=local_rsq)
         else:
             return rsq
         
 
+    @staticmethod
     def gcorr(rsq_res):
         """
         Parameters
@@ -323,5 +393,4 @@ class gazer:
         Return
         Generalized correlation (Square root of Shapley R-squared)
         """
-        res = np.sqrt(rsq_res)
-        return rsq_res
+        return np.sqrt(rsq_res)

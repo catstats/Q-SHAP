@@ -17,13 +17,14 @@ class BuildExt(build_ext):
 qshap_cpp = Extension(
     "qshap._qshap_cpp",
     sources=["qshap/_qshap_cpp.cpp"],
+    depends=["qshap/catboost_fused_router.h"],
     include_dirs=[np.get_include()],
     language="c++",
 )
 
 setup(
     name='qshap',
-    version='0.3.9',
+    version='2.0.0',
     description='Exact computation of Shapley R-squared for tree ensembles in polynomial time',
     long_description=open('README.md').read(),    
     long_description_content_type='text/markdown',  # Specify that the long_description is in Markdown
@@ -31,10 +32,19 @@ setup(
     author_email='jiang548@purdue.edu, zdb969@hs.uci.edu',
     license="GPL-2.0",
     packages=find_packages(),
+    package_data={"qshap": ["*.h"]},
     ext_modules=[qshap_cpp],
     cmdclass={"build_ext": BuildExt},
     url="https://github.com/catstats/Q-SHAP",
-    install_requires=['numpy>=1.22,<2.5', 'scikit-learn',  'shap', 'numba', 'ipywidgets', 'pandas', 'matplotlib'],
+    install_requires=[
+        'numpy>=1.22,<2.5',
+        'scikit-learn',
+        'shap',
+        'numba',
+        'ipywidgets',
+        'pandas',
+        'matplotlib',
+    ],
     extras_require={
         'xgboost': ['xgboost'],
         'lightgbm': ['lightgbm'],
@@ -50,6 +60,6 @@ setup(
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
     ],
-    python_requires='>=3.7', 
+    python_requires='>=3.9,<3.13',
     zip_safe=False
 )
