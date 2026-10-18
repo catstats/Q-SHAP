@@ -2,6 +2,15 @@
 
 The author somehow decides to maintain a changelog starting from version 0.3.3 !!
 
+## [Unreleased]
+
+### Added
+
+- Support Python 3.13 and 3.14 after validating package installation, the
+  compiled C++ extension, all model backends, and the Numba reference backend.
+- Add TreeSHAP prediction and C++/Numba equivalence tests, and a Python
+  3.12-3.14 CI matrix.
+
 ## [2.0.0] - 2026-08-22
 
 ### Added

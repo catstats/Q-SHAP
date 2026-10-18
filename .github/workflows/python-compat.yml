@@ -1,0 +1,41 @@
+name: Python compatibility
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+    env:
+      MPLBACKEND: Agg
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      NUMBA_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            setup.py
+      - name: Install package and all model backends
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[all]" pytest
+          python -m pip check
+      - name: Test the installed package
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -c "import xgboost, lightgbm, catboost; from qshap._backend import cpp_available; assert cpp_available()"
+          python -m pytest "$GITHUB_WORKSPACE/tests" --import-mode=importlib -ra

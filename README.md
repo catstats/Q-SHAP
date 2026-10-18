@@ -26,9 +26,16 @@ pip install "qshap[catboost]"
 pip install "qshap[all]"
 ```
 
-Q-SHAP 2.0.0 supports Python 3.9-3.12 and the current NumPy 2.x-compatible
-dependency stack up to `numpy<2.5`. NumPy 2.5 is not enabled yet because the
-current numba/shap stack does not support it.
+The development version supports Python 3.9-3.14 with `numpy<2.5`.
+Python 3.13 and 3.14 have been validated with both the C++ and Numba backends,
+including TreeSHAP and all supported model libraries. See the
+[compatibility test record](docs/PYTHON_COMPATIBILITY.md) for the tested versions
+and reproduction steps. Python 3.15 and NumPy 2.5 remain outside the validated
+range.
+
+The published Q-SHAP 2.0.0 release still declares Python 3.9-3.12. Until a new
+release includes the expanded range, install this development source from its
+checkout with `pip install .` (or `pip install ".[all]"` for all model backends).
 
 Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
 when available. To force the original numba implementation for comparison or
