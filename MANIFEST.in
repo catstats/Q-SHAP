@@ -1,0 +1,4 @@
+include README.md
+recursive-include qshap *.h
+recursive-include docs *.rst *.py *.md
+prune docs/_build

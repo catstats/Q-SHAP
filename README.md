@@ -41,6 +41,24 @@ Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
 when available. To force the original numba implementation for comparison or
 debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
 
+## Documentation and source builds
+
+The [full public API](docs/api.rst), [installation guide](docs/installation.rst),
+and [quick start](docs/quickstart.rst) are provided as Sphinx sources. Build
+them with `python -m pip install ".[docs]"` followed by
+`python -m sphinx -W --keep-going -b html docs docs/_build/html`.
+
+Source builds require a C++17 compiler and matching Python development
+headers. On Ubuntu 26.04, `python3-dev` targets the distribution's default
+Python, so it cannot fix a separately installed Python 3.12's missing
+`Python.h`. Follow the interpreter-specific instructions in the installation
+guide.
+
+For parallel scripts, put execution under `if __name__ == "__main__":`.
+The progress bar counts completed chunks and is displayed before workers
+start. Startup/import/compilation can delay the first completed chunk;
+small workloads may run faster with the default `ncore=1`.
+
 ## Imports
 
 Use the import that matches the model backend you fit:

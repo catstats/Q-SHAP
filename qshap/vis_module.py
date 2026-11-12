@@ -7,27 +7,49 @@ from ipywidgets import BoundedIntText, Layout, interactive_output, VBox, HBox
 from IPython.display import display, clear_output
 
 class vis:
+    """Static plotting helpers for global and observation-level Q-SHAP output."""
 
     @staticmethod
     def rsq(x, color_map_name="Blues", horizontal=False, model_rsq=True, max_feature=10, cutoff=0, title="Shapley R²", xtitle="Feature index", ytitle="R²", rotation=0, label=None, decimal=3, save_name=None):
-        """
-        Visualize shapley rsq
+        """Plot ranked feature R-squared contributions as a bar chart.
         
-        Parameters:
-        -x: 1 dim array, but we recommend array from shapley rsq OvO ...
-        -color_map_name: Color map allows to you take a variety color map from matplotlib to customize your visualization color.
-        You can try to use "Pastel1", "Pasterl2", "PuBu", "Reds", "Greens" ...
-        -horizontal: horizontal plot or not
-        -model_rsq: display model rsq or not
-        -max_feature: maximum number of features to show
-        -cutoff: only value greater than or equal to the cutoff will be displayed
-        -xtitle: xtitle, note that it's reversed for horizontal 
-        -ytitle: ytitle, note that it's reversed for horizontal 
-        -rotation: rotation of the tick
-        -label: label for the features
-        -title: plot title
-        -decimal: decimals to show 
-        -save_name: the name of the file if you want to save. None as default without saving.
+        Parameters
+        ----------
+        x : numpy.ndarray of shape (n_features,)
+            Global feature contribution vector.
+        color_map_name : str, optional
+            Matplotlib color map name. Default: ``'Blues'``.
+        horizontal : bool, optional
+            Draw horizontal rather than vertical bars. Default: ``False``.
+        model_rsq : bool, optional
+            Annotate the sum of the displayed input vector as model R-squared. Default: ``True``.
+        max_feature : int, optional
+            Maximum number of ranked features to display. Default: ``10``.
+        cutoff : float, optional
+            Include values greater than or equal to this cutoff. Default: ``0``.
+        title : str or None, optional
+            Plot title; heatmap None selects a quantity-specific title. Default: ``'Shapley R²'``.
+        xtitle : str, optional
+            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature index'``.
+        ytitle : str, optional
+            Vertical axis label (bar plots swap axes when horizontal). Default: ``'R²'``.
+        rotation : float, optional
+            Feature tick-label rotation in degrees. Default: ``0``.
+        label : numpy.ndarray or None, optional
+            Feature labels in original input order, one per feature. Default: ``None``.
+        decimal : int, optional
+            Number of decimal places for bar annotations. Default: ``3``.
+        save_name : str or None, optional
+            Output file prefix; .pdf is appended. None skips saving. Default: ``None``.
+
+        Returns
+        -------
+        None
+            Displays the chart and closes it; optionally writes a PDF.
+
+        Notes
+        -----
+        The cutoff and feature limit must leave at least one value to display.
         """
         
         # Calculate the sum of x
@@ -145,14 +167,33 @@ class vis:
     
     @staticmethod
     def loss(loss, save_ind=None, save_prefix="Shapley loss sample", title="Shapley Loss: Sample", color_map_name="Blues", model_rsq=False, decimal=0, xtitle="Feature Index", ytitle="Loss"):
-        """
-        Visualize the loss function for each sample
+        """Inspect raw loss contributions for one observation at a time.
         
-        Parameters:
-        -loss: multidimensonal loss matrix. usually n*p
-        -save_ind: index of sample you want to save, default None.
-        -save_prefix: prefix if you want to save
-        other parameters inherite from vis_rsq
+        Parameters
+        ----------
+        loss : numpy.ndarray of shape (n_samples, n_features)
+            Raw observation-level loss contributions.
+        save_ind : int or None, optional
+            Zero-based observation to save. None displays a notebook row selector. Default: ``None``.
+        save_prefix : str, optional
+            Saved PDF prefix, followed by the selected observation index. Default: ``'Shapley loss sample'``.
+        title : str or None, optional
+            Plot title; heatmap None selects a quantity-specific title. Default: ``'Shapley Loss: Sample'``.
+        color_map_name : str, optional
+            Matplotlib color map name. Default: ``'Blues'``.
+        model_rsq : bool, optional
+            Annotate the sum of the displayed input vector as model R-squared. Default: ``False``.
+        decimal : int, optional
+            Number of decimal places for bar annotations. Default: ``0``.
+        xtitle : str, optional
+            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature Index'``.
+        ytitle : str, optional
+            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Loss'``.
+
+        Returns
+        -------
+        None
+            Displays an ipywidgets selector in notebooks or saves a selected row as PDF.
         """
         def sample_loss(i):
             plt.cla()  # Clear the current axes
@@ -223,17 +264,61 @@ class vis:
         save_name=None,
         show=True,
     ):
-        """Plot observation-level Q-SHAP contributions as a raster heatmap.
+        """Plot observation-level contributions with a signed row-total column.
 
-        ``result`` may be the object returned by ``gazer.rsq(..., local=True)``
-        or a numeric observation-by-feature matrix. A local result displays
-        ``local_rsq`` by default, preserving ``loss`` as a separately available
-        raw squared-loss decomposition.
+        Parameters
+        ----------
+        result : local result, dict, or numpy.ndarray
+            Result of gazer.rsq(local=True), its fields as a dict, or an n-by-p matrix.
+        quantity : {"local_rsq", "loss"} or None, optional
+            Matrix field to show. None prefers local_rsq when present, otherwise loss. Default: ``None``.
+        feature_names : array-like or None, optional
+            Labels matching matrix columns. None generates Feature 0, Feature 1, etc. Default: ``None``.
+        observation_ids : array-like or None, optional
+            Identifiers matching rows. None uses string versions of zero-based indices. Default: ``None``.
+        samples : array-like or None, optional
+            Explicit zero-based integer row indices or string observation IDs. None selects extremes of row totals. Default: ``None``.
+        n_show : int, optional
+            Maximum rows selected automatically, split between high and low totals. Default: ``40``.
+        global_importance : array-like or None, optional
+            Column ordering scores, sorted descending. Defaults to result.rsq or matrix column sums. Default: ``None``.
+        title : str or None, optional
+            Plot title; heatmap None selects a quantity-specific title. Default: ``None``.
+        xtitle : str, optional
+            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature'``.
+        ytitle : str, optional
+            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Observations'``.
+        legend_title : str or None, optional
+            Color bar title. None selects a quantity-specific label. Default: ``None``.
+        low_color : color, optional
+            Matplotlib color for negative values. Default: ``'#2166AC'``.
+        mid_color : color, optional
+            Matplotlib color at zero. Default: ``'white'``.
+        high_color : color, optional
+            Matplotlib color for positive values. Default: ``'#B2182B'``.
+        rotation : float, optional
+            Feature tick-label rotation in degrees. Default: ``45``.
+        save_name : str or None, optional
+            Output file prefix; .pdf is appended. None skips saving. Default: ``None``.
+        show : bool, optional
+            Call pyplot.show() when True; False supports scripts and caller-managed display. Default: ``True``.
 
-        When ``samples`` is ``None``, approximately half of ``n_show`` rows are
-        selected from each extreme of the row totals. Explicit samples may be
-        zero-based row indices or values supplied through ``observation_ids``.
-        Feature columns follow the descending global ``rsq`` ordering.
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Heatmap figure; the caller may save or close it.
+
+        Raises
+        ------
+        ValueError
+            If matrix dimensions, labels, quantity, selection, or ordering scores are invalid.
+
+        Notes
+        -----
+        Columns follow descending global importance. Automatic row selection uses
+        both extremes of signed row totals. Values decompose global R-squared;
+        they are not separate per-observation R-squared values.
+        ``loss_heatmap`` is an alias of this method.
         """
 
         def get_field(obj, name):
@@ -483,15 +568,29 @@ class vis:
     @staticmethod
     def elbow(x, xtitle="Feature Number", ytitle="Explained Variance",
                 max_comp=10, title='Explained Variance by Top Features', marker='o', linestyle='--'):
-        """
-        Construct elbow plot for top features.
+        """Plot the contributions of the highest-ranked features.
         
-        Parameters:
-        -x: Shapley R squared
-        -max_comp: maximum number of components in the plot
+        Parameters
+        ----------
+        x : numpy.ndarray of shape (n_features,)
+            Global feature contribution vector.
+        xtitle : str, optional
+            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature Number'``.
+        ytitle : str, optional
+            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Explained Variance'``.
+        max_comp : int, optional
+            Maximum number of ranked features in the curve. Default: ``10``.
+        title : str or None, optional
+            Plot title; heatmap None selects a quantity-specific title. Default: ``'Explained Variance by Top Features'``.
+        marker : str, optional
+            Matplotlib marker style for the elbow curve. Default: ``'o'``.
+        linestyle : str, optional
+            Matplotlib line style for the elbow curve. Default: ``'--'``.
         
-        Return:
-        An elbow plot and the top indices in x that have the highest variance explained
+        Returns
+        -------
+        numpy.ndarray of integers
+            Zero-based indices of the displayed features, in descending contribution order.
         """
         # Ensure max_comp is not greater than the length of x
         max_comp = int(min(max_comp, len(x)))
@@ -527,14 +626,27 @@ class vis:
     @staticmethod
     def cumu(x, xtitle="Feature Number", ytitle="Cumulative Explained Variance", title='Cumulative Explained Variance by Top Features',
              max_comp=10, save_name=None):
-        """
-        Construct cumulative explained variance plot for top features.
+        """Plot cumulative contributions of the highest-ranked features.
 
-        Parameters:
-        -x:  Shapley R squared
+        Parameters
+        ----------
+        x : numpy.ndarray of shape (n_features,)
+            Global feature contribution vector.
+        xtitle : str, optional
+            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature Number'``.
+        ytitle : str, optional
+            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Cumulative Explained Variance'``.
+        title : str or None, optional
+            Plot title; heatmap None selects a quantity-specific title. Default: ``'Cumulative Explained Variance by Top Features'``.
+        max_comp : int, optional
+            Maximum number of ranked features in the curve. Default: ``10``.
+        save_name : str or None, optional
+            Output file prefix; .pdf is appended. None skips saving. Default: ``None``.
 
-        Return:
-        A cumulative explained variance plot
+        Returns
+        -------
+        None
+            Displays and closes the cumulative chart; optionally writes a PDF.
         """
 
         # Step 1: Calculate the total variance explained (R²) as the sum of explained variances
@@ -560,9 +672,9 @@ class vis:
 
         # Add labels and title
         plt.xticks(ticks=np.arange(1, len(explained_variance_sorted) + 1))  # Ensure integer ticks for components
-        plt.xlabel('Number of Top Features')  # X-axis label
-        plt.ylabel('Cumulative R²')           # Y-axis label
-        plt.title('Cumulative Variance Explained by Components')  # Title
+        plt.xlabel(xtitle)  # X-axis label
+        plt.ylabel(ytitle)           # Y-axis label
+        plt.title(title)  # Title
 
         # Add legend
         plt.legend()
@@ -578,23 +690,43 @@ class vis:
     
     @staticmethod
     def gcorr(x, color_map_name="Blues", horizontal=False, max_feature=10, cutoff=0, title="Generalized Correlation of Features to the Outcome", xtitle="Feature index", ytitle="Generalized Correlation", rotation=0, label=None, decimal=3, save_name=None):
-        """
-        Visualize Generalized Shapley correlation
+        """Plot square roots of global feature R-squared contributions.
         
-        Parameters:
-        -x: 1 dim array, but we recommend array from shapley rsq OvO ...
-        -color_map_name: Color map allows to you take a variety color map from matplotlib to customize your visualization color.
-        You can try to use "Pastel1", "Pasterl2", "PuBu", "Reds", "Greens" ...
-        -horizontal: horizontal plot or not
-        -max_feature: maximum number of features to show
-        -cutoff: only value greater than or equal to the cutoff will be displayed
-        -xtitle: xtitle, note that it's reversed for horizontal 
-        -ytitle: ytitle, note that it's reversed for horizontal 
-        -rotation: rotation of the tick
-        -label: label for the features
-        -title: plot title
-        -decimal: decimals to show 
-        -save_name: the name of the file if you want to save. None as default without saving.
+        Parameters
+        ----------
+        x : numpy.ndarray of shape (n_features,)
+            Global feature contribution vector.
+        color_map_name : str, optional
+            Matplotlib color map name. Default: ``'Blues'``.
+        horizontal : bool, optional
+            Draw horizontal rather than vertical bars. Default: ``False``.
+        max_feature : int, optional
+            Maximum number of ranked features to display. Default: ``10``.
+        cutoff : float, optional
+            Include values greater than or equal to this cutoff. Default: ``0``.
+        title : str or None, optional
+            Plot title; heatmap None selects a quantity-specific title. Default: ``'Generalized Correlation of Features to the Outcome'``.
+        xtitle : str, optional
+            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature index'``.
+        ytitle : str, optional
+            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Generalized Correlation'``.
+        rotation : float, optional
+            Feature tick-label rotation in degrees. Default: ``0``.
+        label : numpy.ndarray or None, optional
+            Feature labels in original input order, one per feature. Default: ``None``.
+        decimal : int, optional
+            Number of decimal places for bar annotations. Default: ``3``.
+        save_name : str or None, optional
+            Output file prefix; .pdf is appended. None skips saving. Default: ``None``.
+
+        Returns
+        -------
+        None
+            Displays and closes the chart; optionally writes a PDF. Negative input values produce NaN.
+
+        Notes
+        -----
+        The cutoff and feature limit must leave at least one value to display.
         """
         vis.rsq(
             np.sqrt(x),

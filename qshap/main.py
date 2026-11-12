@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 import warnings
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from numbers import Integral
 from types import SimpleNamespace
 
@@ -10,7 +10,7 @@ import numpy as np
 import shap
 import sklearn.ensemble
 import sklearn.tree
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from qshap.boosting_importance import fast_catboost_qshap_r2
 from qshap.catboost_backend import catboost_float_features, route_tree_leaf_nodes
@@ -100,6 +100,30 @@ def _save_model_json(model, *, package_name):
             os.remove(model_filename)
 
 class gazer:
+    """Prepare a fitted regression tree model for Q-SHAP.
+
+    Parameters
+    ----------
+    model : fitted regressor
+        A scikit-learn DecisionTreeRegressor or GradientBoostingRegressor,
+        XGBoost XGBRegressor, LightGBM LGBMRegressor, or CatBoostRegressor.
+        Optional model libraries must be installed separately or through extras.
+        Raw XGBoost Booster and classifier objects are not supported by this API.
+
+    Raises
+    ------
+    NotImplementedError
+        If the fitted model or a model's split representation is unsupported.
+    ValueError
+        If model parsing encounters invalid or unsupported metadata.
+
+    Notes
+    -----
+    The explainer caches parsed trees and numerical preparation for reuse.
+    CatBoost accepts numeric scalar regression trees using SymmetricTree,
+    Depthwise, or Lossguide. Categorical/CTR, text, and embedding split
+    representations are not supported. Input columns must retain training order.
+    """
     def __init__(self, model):
         self.model = model
         self.explainer = None
@@ -151,7 +175,30 @@ class gazer:
         self.store_z = store_complex_root(self.max_depth * 2)
         
     def get_tree(self, tree=0):
-        """Return the low-level fields of a tree already stored by gazer."""
+        """Return the parsed fields of one tree.
+
+        Parameters
+        ----------
+        tree : int, optional
+            Zero-based tree index (default 0). Python indexing also accepts negative
+            indices; R's ``get_tree`` instead uses one-based positive indices.
+
+        Returns
+        -------
+        dict
+            ``children_left``, ``children_right`` (zero-based children, -1 at leaves),
+            ``feature`` (zero-based columns, -1 at leaves), ``threshold``,
+            ``max_depth``, ``n_node_samples`` (node cover/weight), ``value``,
+            ``node_count``, ``default_left`` (missing routing, possibly None),
+            and ``xgboost_split`` (strict float32 split convention).
+
+        Raises
+        ------
+        IndexError
+            If the tree index is out of range.
+        TypeError
+            If the tree index cannot be used for sequence indexing.
+        """
         if self.model_kind == "sklearn_tree":
             trees = [self.model.tree_]
         elif self.model_kind == "sklearn_gbdt":
@@ -175,12 +222,37 @@ class gazer:
 
 
     def loss(self, x, y, y_mean_ori=None, progress_bar=True, backend="auto"):
-        """
+        """Compute observation-level contributions to the change in squared loss.
+
         Parameters
-        -x: x
-        -y: y
-        -y_mean_ori: mean of the original
-        -progress_bar: whether show the progress bar or not
+        ----------
+        x : numpy.ndarray of shape (n_samples, n_features)
+            Numeric feature matrix in the fitted model's column order.
+        y : numpy.ndarray of shape (n_samples,)
+            Numeric responses corresponding to the rows of ``x``.
+        y_mean_ori : float or None, optional
+            Original response mean. Defaults to ``mean(y)``; parallel chunks share
+            the mean of the full evaluated sample.
+        progress_bar : bool, optional
+            Display progress over trees where supported. Defaults to True.
+        backend : {"auto", "cpp", "numba"}, optional
+            General-tree quadratic-term implementation. ``auto`` uses the compiled
+            extension when available and warns before falling back to Numba.
+            ``cpp`` requires the extension; ``numba`` uses the reference backend.
+
+        Returns
+        -------
+        numpy.ndarray of shape (n_samples, n_features)
+            Raw loss contributions. Negating and dividing by the full-sample
+            ``sum((y - mean(y)) ** 2)`` gives contributions to global R-squared.
+            These are not per-observation R-squared values.
+
+        Raises
+        ------
+        ValueError
+            If a backend name or supported backend input is invalid.
+        RuntimeError
+            If ``backend="cpp"`` is requested but the extension cannot load.
         """
         max_depth = self.max_depth
         model = self.model
@@ -298,28 +370,65 @@ class gazer:
 
     def rsq(self, x, y, loss_out=False, ncore=1, nsample=None, nfrac=None,
             random_state=42, progress_bar=True, backend="auto", local=None):
-        """
-        Parameters
-        -x: the original x
-        -y: the original y
-        -loss_out: output local decompositions or not
-        -local: alias for loss_out; local=True returns rsq, loss, and local_rsq
-        -nsample: number of samples to sample from, by default use all samples
-        -nfrac: fraction of samples to sample from, by default 1, use all samples
-        -ncore: number of cores to use, with default value 1. It will NOT be beneficial for small datasets and shallow depth.
-        -random_state: control random seed for numpy
-        -progress_bar: whether show the progress bar or not
-        -backend: "auto" uses the compiled C++ backend when available; "numba"
-         uses the Python/numba reference implementation for understanding the algorithm.
+        """Decompose the fitted model's R-squared into feature contributions.
 
-        Return
-        Shapley R-squared. When local=True (or loss_out=True), returns a
-        namespace containing:
-        -rsq: global feature-specific Shapley contributions to R-squared
-        -loss: raw observation-level contributions to the change in squared loss
-        -local_rsq: observation-level contributions to the global R-squared
-         decomposition, defined as -loss / sum((y - mean(y)) ** 2)
-        """ 
+        Parameters
+        ----------
+        x : numpy.ndarray of shape (n_samples, n_features)
+            Numeric feature matrix in the fitted model's column order.
+        y : numpy.ndarray of shape (n_samples,)
+            Numeric responses corresponding to the rows of ``x``.
+        loss_out : bool, optional
+            Legacy spelling for requesting local output. Defaults to False.
+        ncore : int, optional
+            Worker processes, default 1; -1 requests available CPUs. Capped by CPU
+            count and sample size. Start scripts under a ``__main__`` guard.
+        nsample : int or None, optional
+            Evaluate a random subset of this size, strictly between 0 and the
+            original row count. Takes precedence over ``nfrac``.
+        nfrac : float or None, optional
+            Subsample fraction strictly between 0 and 1; must select at least one row.
+        random_state : int, optional
+            NumPy random seed for subsampling, default 42.
+        progress_bar : bool, optional
+            Display tree progress for serial execution or completed chunks for
+            parallel execution. Defaults to True. Worker startup precedes completion.
+        backend : {"auto", "cpp", "numba"}, optional
+            General-tree quadratic-term implementation. ``auto`` uses the compiled
+            extension when available and warns before falling back to Numba.
+            ``cpp`` requires the extension; ``numba`` uses the reference backend.
+        local : bool or None, optional
+            Alias overriding ``loss_out`` when supplied. ``True`` returns global
+            values and both local matrices; defaults to None.
+
+        Returns
+        -------
+        numpy.ndarray of shape (n_features,) or types.SimpleNamespace
+            Global feature R-squared values when local output is disabled. Otherwise,
+            the namespace has ``rsq`` (feature vector), ``loss`` (raw n-by-p loss
+            contributions), and ``local_rsq = -loss / SST`` (n-by-p). Column sums
+            of ``local_rsq`` equal ``rsq``. Row order is preserved without sampling;
+            with sampling it follows the sampled rows.
+
+        Raises
+        ------
+        ValueError
+            If the response has zero variance, a sampling size/fraction is invalid,
+            the sample is empty, or ``ncore`` is not positive or -1.
+        TypeError
+            If ``ncore`` is not an integer (booleans are rejected).
+        RuntimeError
+            If a required compiled backend cannot load.
+
+        Notes
+        -----
+        Numeric symmetric CatBoost models use the specialized cached global
+        algorithm when local output is disabled. This path is independent of
+        ``backend`` and ``ncore``. Local output uses the matrix-valued path.
+        Global feature contributions can be negative; their sum is the model's
+        R-squared on the evaluated sample. Parallel processes can cost more than
+        serial computation for small datasets.
+        """
 
         if local is not None:
             loss_out = bool(local)
@@ -363,15 +472,20 @@ class gazer:
             x_chunks = divide_chunks(x, ncore)
             y_chunks = divide_chunks(y, ncore)
 
-            with ProcessPoolExecutor(max_workers=ncore) as executor:
-                # Submit all chunks for processing
-                futures = [executor.submit(self.loss, x_chunks[i], y_chunks[i], y_mean_ori, False, backend) for i in range(ncore)]
-
-                # Assign progress bar to a variable
-                iterator = tqdm(futures, desc="Processing", total=len(futures)) if progress_bar else futures
-
-                # Wait for all futures to complete and collect results
-                results = [future.result() for future in iterator]
+            # Display progress before starting workers. Collect in completion
+            # order, but concatenate in input order so local rows stay aligned.
+            results = [None] * ncore
+            with tqdm(total=ncore, desc="Q-SHAP chunks", unit="chunk",
+                      disable=not progress_bar) as progress:
+                with ProcessPoolExecutor(max_workers=ncore) as executor:
+                    futures = {
+                        executor.submit(self.loss, x_chunks[i], y_chunks[i],
+                                        y_mean_ori, False, backend): i
+                        for i in range(ncore)
+                    }
+                    for future in as_completed(futures):
+                        results[futures[future]] = future.result()
+                        progress.update(1)
             
             loss = np.concatenate(results) 
 
@@ -386,11 +500,17 @@ class gazer:
 
     @staticmethod
     def gcorr(rsq_res):
-        """
-        Parameters
-        -rsq_res: the rsq result from calling gazer.rsq
+        """Take the square root of feature R-squared contributions.
 
-        Return
-        Generalized correlation (Square root of Shapley R-squared)
+        Parameters
+        ----------
+        rsq_res : numpy.ndarray of shape (n_features,)
+            Global contribution vector, not a local-output namespace.
+
+        Returns
+        -------
+        numpy.ndarray
+            Elementwise square roots. Negative contributions produce NaN with the
+            NumPy invalid-value warning; they are not clipped.
         """
         return np.sqrt(rsq_res)
