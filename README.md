@@ -26,10 +26,6 @@ python -m pip install "qshap[catboost]"
 python -m pip install "qshap[all]"
 ```
 
-These instructions and examples target qshap 3.0.0. Check the installed
-version with `python -c "import qshap; print(qshap.__version__)"`. If the
-available PyPI release is older, install the 3.0.0 source package below.
-
 qshap 3.0.0 supports Python 3.9-3.15 with `numpy<2.6`. Python 3.15 requires
 Numba >=0.68. See the [compatibility record](https://github.com/catstats/Q-SHAP/blob/master/docs/PYTHON_COMPATIBILITY.md)
 for the tested environments and backend coverage.

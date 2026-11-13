@@ -15,10 +15,6 @@ Install from PyPI (recommended)
    python -m pip install qshap
    python -m pip install "qshap[xgboost,lightgbm]"
 
-These instructions target version 3.0.0. Check the installed version with
-``python -c "import qshap; print(qshap.__version__)"``. If the available
-PyPI release is older, use the matching local sources below.
-
 Install from local sources
 ---------------------------
 
