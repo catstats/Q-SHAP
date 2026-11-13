@@ -1,7 +1,7 @@
 Installation and supported environments
 =======================================
 
-The development source declares Python >=3.9,<3.16 and NumPy <2.6.
+The 3.0.0 development source declares Python >=3.9,<3.16 and NumPy <2.6.
 Python 3.15 requires Numba >=0.68; validation used NumPy 2.5.4.
 Exact interpreter versions and backend coverage are recorded in
 ``docs/PYTHON_COMPATIBILITY.md``. Standard CPython builds with the GIL are

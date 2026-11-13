@@ -26,7 +26,7 @@ pip install "qshap[catboost]"
 pip install "qshap[all]"
 ```
 
-The development version supports Python 3.9–3.15 with `numpy<2.6`.
+The 3.0.0 development version supports Python 3.9–3.15 with `numpy<2.6`.
 Python 3.15 requires a compatible Numba release (`numba>=0.68`); the validation
 used NumPy 2.5.4. See the [compatibility record](docs/PYTHON_COMPATIBILITY.md)
 for exact environments, model coverage, and results from installed wheels.
