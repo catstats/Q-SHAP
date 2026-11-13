@@ -5,43 +5,61 @@
 
 This package is used to compute feature-specific $R^2$ values, following Shapley decomposition of the total $R^2$, for tree ensembles in polynomial time based on the [paper](https://arxiv.org/abs/2407.03515).
 
-This version supports **XGBoost**, **LightGBM**, **CatBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT** regression models. We are working to update it for random forests in the next version. Please check [Q-SHAP Tutorial](./Q-SHAP%20Tutorial.ipynb) for more details using Q-SHAP.
+This version supports **XGBoost**, **LightGBM**, **CatBoost**, **scikit-learn Decision Tree**, and **scikit-learn GBDT** regression models. Please check [Q-SHAP Tutorial](https://github.com/catstats/Q-SHAP/blob/master/Q-SHAP%20Tutorial.ipynb) for more details using Q-SHAP.
 
 ## Installation
 
-`qshap` can be installed through PyPI:
+### From PyPI (recommended)
 
-<pre>
-pip install qshap
-</pre>
+```sh
+python -m pip install qshap
+```
 
 Install the model libraries you need with optional extras:
 
 ```sh
-pip install "qshap[xgboost]"
-pip install "qshap[lightgbm]"
-pip install "qshap[catboost]"
+python -m pip install "qshap[xgboost]"
+python -m pip install "qshap[lightgbm]"
+python -m pip install "qshap[catboost]"
 
 # Or install all supported boosting backends:
-pip install "qshap[all]"
+python -m pip install "qshap[all]"
 ```
 
-The 3.0.0 development version supports Python 3.9–3.15 with `numpy<2.6`.
-Python 3.15 requires a compatible Numba release (`numba>=0.68`); the validation
-used NumPy 2.5.4. See the [compatibility record](docs/PYTHON_COMPATIBILITY.md)
-for exact environments, model coverage, and results from installed wheels.
+These instructions and examples target qshap 3.0.0. Check the installed
+version with `python -c "import qshap; print(qshap.__version__)"`. If the
+available PyPI release is older, install the 3.0.0 source package below.
 
-The published Q-SHAP 2.0.0 release still declares Python 3.9–3.12. Until a new
-release includes these changes, install this development checkout with
-`python -m pip install .` and add the model extras you need.
+qshap 3.0.0 supports Python 3.9-3.15 with `numpy<2.6`. Python 3.15 requires
+Numba >=0.68. See the [compatibility record](https://github.com/catstats/Q-SHAP/blob/master/docs/PYTHON_COMPATIBILITY.md)
+for the tested environments and backend coverage.
 
-For Python 3.15, XGBoost and LightGBM can be installed with
-`python -m pip install ".[xgboost,lightgbm]"`. CatBoost 1.2.10 currently has no
-Python 3.15 wheel on PyPI. Use Python 3.14 for its precompiled package, or
-consult the [installation guide](docs/installation.rst) and compatibility
-record for the source-build requirements and validation outcome. The
-`[catboost]` and `[all]` extras request CatBoost on every Python version;
-on 3.15 this can trigger a substantial upstream source build.
+CatBoost 1.2.10 has no Python 3.15 wheel on PyPI at the time of validation.
+Use Python 3.14 for its precompiled package, or follow the
+[installation guide](https://github.com/catstats/Q-SHAP/blob/master/docs/installation.rst)
+for source-build requirements. On Python 3.15, the `[catboost]` and `[all]`
+extras can trigger a substantial CatBoost source build. To install only
+XGBoost and LightGBM, use `python -m pip install "qshap[xgboost,lightgbm]"`.
+
+### From local sources
+
+From the Python package source directory:
+
+```sh
+python -m pip install .
+
+# Include the model backends needed by your application:
+python -m pip install ".[xgboost,lightgbm]"
+```
+
+Or, from the directory containing the source archive:
+
+```sh
+python -m pip install "./qshap-3.0.0.tar.gz[xgboost,lightgbm]"
+```
+
+A local source installation requires a C++17 compiler and matching Python
+development headers. See the installation guide for platform-specific steps.
 
 Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
 when available. To force the original numba implementation for comparison or
@@ -49,8 +67,8 @@ debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
 
 ## Documentation and source builds
 
-The [full public API](docs/api.rst), [installation guide](docs/installation.rst),
-and [quick start](docs/quickstart.rst) are provided as Sphinx sources. Build
+The [full public API](https://github.com/catstats/Q-SHAP/blob/master/docs/api.rst), [installation guide](https://github.com/catstats/Q-SHAP/blob/master/docs/installation.rst),
+and [quick start](https://github.com/catstats/Q-SHAP/blob/master/docs/quickstart.rst) are provided as Sphinx sources. Build
 them with `python -m pip install ".[docs]"` followed by
 `python -m sphinx -W --keep-going -b html docs docs/_build/html`.
 
@@ -185,7 +203,7 @@ and `nan_mode` routing are preserved. Models containing categorical
 represented as raw input-column thresholds.
 
 <p align="center">
-  <img width="500" src="./figs/boston_housing.png" />
+  <img width="500" src="https://raw.githubusercontent.com/catstats/Q-SHAP/master/figs/boston_housing.png" />
 </p>
 
 ## Citation

@@ -1,24 +1,42 @@
 Installation and supported environments
 =======================================
 
-The 3.0.0 development source declares Python >=3.9,<3.16 and NumPy <2.6.
-Python 3.15 requires Numba >=0.68; validation used NumPy 2.5.4.
-Exact interpreter versions and backend coverage are recorded in
-``docs/PYTHON_COMPATIBILITY.md``. Standard CPython builds with the GIL are
-covered; free-threaded builds have not been validated.
-The published 2.0.0 release retains the older Python <3.13 metadata until
-the development changes are released.
+qshap 3.0.0 supports Python >=3.9,<3.16 and NumPy <2.6. Python 3.15 requires
+Numba >=0.68; validation used NumPy 2.5.4. Exact interpreter versions and
+backend coverage are recorded in ``docs/PYTHON_COMPATIBILITY.md``. Standard
+CPython builds with the GIL are covered; free-threaded builds have not
+been validated.
 
-From a development checkout, use the intended interpreter consistently:
+Install from PyPI (recommended)
+-------------------------------
 
 .. code-block:: sh
 
-   python -m pip install --upgrade pip
+   python -m pip install qshap
+   python -m pip install "qshap[xgboost,lightgbm]"
+
+These instructions target version 3.0.0. Check the installed version with
+``python -c "import qshap; print(qshap.__version__)"``. If the available
+PyPI release is older, use the matching local sources below.
+
+Install from local sources
+---------------------------
+
+From the Python package source directory:
+
+.. code-block:: sh
+
+   python -m pip install .
    python -m pip install ".[xgboost,lightgbm]"
 
-For a published release, use ``python -m pip install qshap`` (or the model
-extras). A compatible wheel avoids local compilation; a source installation
-requires a C++17 compiler and the headers for that exact Python interpreter.
+Alternatively, from the directory containing the source archive:
+
+.. code-block:: sh
+
+   python -m pip install "./qshap-3.0.0.tar.gz[xgboost,lightgbm]"
+
+A compatible wheel avoids local compilation. A source installation requires
+a C++17 compiler and the headers for that exact Python interpreter.
 
 CatBoost and Python 3.15
 ------------------------
