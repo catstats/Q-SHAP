@@ -26,16 +26,22 @@ pip install "qshap[catboost]"
 pip install "qshap[all]"
 ```
 
-The development version supports Python 3.9-3.14 with `numpy<2.5`.
-Python 3.13 and 3.14 have been validated with both the C++ and Numba backends,
-including TreeSHAP and all supported model libraries. See the
-[compatibility test record](docs/PYTHON_COMPATIBILITY.md) for the tested versions
-and reproduction steps. Python 3.15 and NumPy 2.5 remain outside the validated
-range.
+The development version supports Python 3.9–3.15 with `numpy<2.6`.
+Python 3.15 requires a compatible Numba release (`numba>=0.68`); the validation
+used NumPy 2.5.4. See the [compatibility record](docs/PYTHON_COMPATIBILITY.md)
+for exact environments, model coverage, and results from installed wheels.
 
-The published Q-SHAP 2.0.0 release still declares Python 3.9-3.12. Until a new
-release includes the expanded range, install this development source from its
-checkout with `pip install .` (or `pip install ".[all]"` for all model backends).
+The published Q-SHAP 2.0.0 release still declares Python 3.9–3.12. Until a new
+release includes these changes, install this development checkout with
+`python -m pip install .` and add the model extras you need.
+
+For Python 3.15, XGBoost and LightGBM can be installed with
+`python -m pip install ".[xgboost,lightgbm]"`. CatBoost 1.2.10 currently has no
+Python 3.15 wheel on PyPI. Use Python 3.14 for its precompiled package, or
+consult the [installation guide](docs/installation.rst) and compatibility
+record for the source-build requirements and validation outcome. The
+`[catboost]` and `[all]` extras request CatBoost on every Python version;
+on 3.15 this can trigger a substantial upstream source build.
 
 Q-SHAP uses a compiled C++ backend for the core second-order tree calculation
 when available. To force the original numba implementation for comparison or

@@ -1,9 +1,11 @@
 Installation and supported environments
 =======================================
 
-The development source declares Python >=3.9,<3.15 and NumPy <2.5.
-Python 3.13 and 3.14 validation details are recorded in
-``docs/PYTHON_COMPATIBILITY.md``. Python 3.15 is outside the validated range.
+The development source declares Python >=3.9,<3.16 and NumPy <2.6.
+Python 3.15 requires Numba >=0.68; validation used NumPy 2.5.4.
+Exact interpreter versions and backend coverage are recorded in
+``docs/PYTHON_COMPATIBILITY.md``. Standard CPython builds with the GIL are
+covered; free-threaded builds have not been validated.
 The published 2.0.0 release retains the older Python <3.13 metadata until
 the development changes are released.
 
@@ -12,11 +14,26 @@ From a development checkout, use the intended interpreter consistently:
 .. code-block:: sh
 
    python -m pip install --upgrade pip
-   python -m pip install ".[all]"
+   python -m pip install ".[xgboost,lightgbm]"
 
 For a published release, use ``python -m pip install qshap`` (or the model
 extras). A compatible wheel avoids local compilation; a source installation
 requires a C++17 compiler and the headers for that exact Python interpreter.
+
+CatBoost and Python 3.15
+------------------------
+
+CatBoost 1.2.10 has no CPython 3.15 wheel on PyPI at the time of validation.
+For a precompiled CatBoost installation, use Python 3.14 and install
+``.[catboost]`` or ``.[all]``. On Python 3.15 these extras attempt an upstream
+source build. That requires additional build tools (including Ninja,
+CMake, Conan, and a suitable compiler), downloads native dependencies, and
+can take substantially longer than installing the other backends.
+The numerical CatBoost backend was validated on Python 3.15 using an
+unmodified, source-built CPU package with the optional Jupyter visualization
+widget disabled (``--no-widget``). The compatibility record gives the full
+build command. See also the
+`upstream Python 3.15 issue <https://github.com/catboost/catboost/issues/3213>`_.
 
 Missing Python.h on Ubuntu or Debian
 ------------------------------------

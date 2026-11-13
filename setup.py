@@ -64,10 +64,11 @@ setup(
     cmdclass={"build_ext": BuildExt},
     url="https://github.com/catstats/Q-SHAP",
     install_requires=[
-        'numpy>=1.22,<2.5',
+        'numpy>=1.22,<2.6',
         'scikit-learn',
         'shap',
-        'numba',
+        'numba; python_version < "3.15"',
+        'numba>=0.68; python_version >= "3.15"',
         'ipywidgets',
         'pandas',
         'matplotlib',
@@ -89,7 +90,8 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15',
     ],
-    python_requires='>=3.9,<3.15',
+    python_requires='>=3.9,<3.16',
     zip_safe=False
 )

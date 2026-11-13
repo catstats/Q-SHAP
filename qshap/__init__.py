@@ -11,10 +11,10 @@ def _numpy_major_minor(version):
         return (0, 0)
 
 
-if _numpy_major_minor(_np.__version__) >= (2, 5):
+if _numpy_major_minor(_np.__version__) >= (2, 6):
     raise ImportError(
-        f"qshap {__version__} requires numpy<2.5 because the current numba/shap "
-        "dependency stack does not support NumPy 2.5 yet."
+        f"qshap {__version__} requires numpy<2.6; NumPy 2.6 and newer "
+        "are outside the validated dependency range."
     )
 
 
