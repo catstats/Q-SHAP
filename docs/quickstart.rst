@@ -30,19 +30,16 @@ its columns sum to global contributions. Negative contributions are valid.
 Parallel scripts
 ----------------
 
-Use a main guard on platforms that start workers by spawning Python:
+For a complete script with data creation, model fitting, and a main
+guard for spawned workers, see :doc:`examples/parallel`.
 
-.. code-block:: python
-
-   def main():
-       # Load data, fit model, and create explainer inside this function.
-       result = explainer.rsq(x, y, local=True, ncore=2)
-
-   if __name__ == "__main__":
-       main()
-
-Replace the commented preparation with your own data/model setup. The
-parallel bar shows completed chunks. It appears before worker startup;
+The parallel bar shows completed chunks. It appears before worker startup;
 the first update follows a completed chunk, including its import and
 compilation costs. Compare with ``ncore=1`` before increasing workers.
 Notebook execution depends on the platform's multiprocessing support.
+
+More examples
+-------------
+
+Continue with :doc:`examples/index` for global and local decompositions,
+model-specific examples, and plotting options.

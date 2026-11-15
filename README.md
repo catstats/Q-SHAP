@@ -64,7 +64,8 @@ debugging, pass `backend="numba"` to `gazer.loss()` or `gazer.rsq()`.
 ## Documentation and source builds
 
 The [full public API](https://github.com/catstats/Q-SHAP/blob/master/docs/api.rst), [installation guide](https://github.com/catstats/Q-SHAP/blob/master/docs/installation.rst),
-and [quick start](https://github.com/catstats/Q-SHAP/blob/master/docs/quickstart.rst) are provided as Sphinx sources. Build
+[quick start](https://github.com/catstats/Q-SHAP/blob/master/docs/quickstart.rst),
+and [worked examples](https://github.com/catstats/Q-SHAP/blob/master/docs/examples/index.rst) are provided as Sphinx sources. Build
 them with `python -m pip install ".[docs]"` followed by
 `python -m sphinx -W --keep-going -b html docs docs/_build/html`.
 
