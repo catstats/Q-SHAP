@@ -22,17 +22,17 @@ class vis:
         horizontal : bool, optional
             Draw horizontal rather than vertical bars. Default: ``False``.
         model_rsq : bool, optional
-            Annotate the sum of the displayed input vector as model R-squared. Default: ``True``.
+            Annotate the sum of the full input vector, before cutoff and feature selection, as model R-squared. Default: ``True``.
         max_feature : int, optional
             Maximum number of ranked features to display. Default: ``10``.
         cutoff : float, optional
             Include values greater than or equal to this cutoff. Default: ``0``.
         title : str or None, optional
-            Plot title; heatmap None selects a quantity-specific title. Default: ``'Shapley R²'``.
+            Plot title. Default: ``'Shapley R²'``.
         xtitle : str, optional
-            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature index'``.
+            Feature-axis label; placed on the vertical axis when horizontal=True. Default: ``'Feature index'``.
         ytitle : str, optional
-            Vertical axis label (bar plots swap axes when horizontal). Default: ``'R²'``.
+            Contribution-axis label; placed on the horizontal axis when horizontal=True. Default: ``'R²'``.
         rotation : float, optional
             Feature tick-label rotation in degrees. Default: ``0``.
         label : numpy.ndarray or None, optional
@@ -177,18 +177,19 @@ class vis:
             Zero-based observation to save. None displays a notebook row selector. Default: ``None``.
         save_prefix : str, optional
             Saved PDF prefix, followed by the selected observation index. Default: ``'Shapley loss sample'``.
-        title : str or None, optional
-            Plot title; heatmap None selects a quantity-specific title. Default: ``'Shapley Loss: Sample'``.
+        title : str, optional
+            Plot title prefix; the zero-based observation index is appended. Default: ``'Shapley Loss: Sample'``.
         color_map_name : str, optional
             Matplotlib color map name. Default: ``'Blues'``.
         model_rsq : bool, optional
-            Annotate the sum of the displayed input vector as model R-squared. Default: ``False``.
+            Legacy annotation flag passed to ``vis.rsq``. Keep False for raw loss
+            contributions, whose sum is not model R-squared. Default: ``False``.
         decimal : int, optional
-            Number of decimal places for bar annotations. Default: ``0``.
+            Number of decimal places for loss annotations. Default: ``0``.
         xtitle : str, optional
-            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature Index'``.
+            Horizontal axis label. Default: ``'Feature Index'``.
         ytitle : str, optional
-            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Loss'``.
+            Vertical axis label. Default: ``'Loss'``.
 
         Returns
         -------
@@ -283,11 +284,11 @@ class vis:
         global_importance : array-like or None, optional
             Column ordering scores, sorted descending. Defaults to result.rsq or matrix column sums. Default: ``None``.
         title : str or None, optional
-            Plot title; heatmap None selects a quantity-specific title. Default: ``None``.
+            Plot title. None selects a quantity-specific title. Default: ``None``.
         xtitle : str, optional
-            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature'``.
+            Horizontal axis label. Default: ``'Feature'``.
         ytitle : str, optional
-            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Observations'``.
+            Vertical axis label. Default: ``'Observations'``.
         legend_title : str or None, optional
             Color bar title. None selects a quantity-specific label. Default: ``None``.
         low_color : color, optional
@@ -575,13 +576,13 @@ class vis:
         x : numpy.ndarray of shape (n_features,)
             Global feature contribution vector.
         xtitle : str, optional
-            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature Number'``.
+            Horizontal axis label. Default: ``'Feature Number'``.
         ytitle : str, optional
-            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Explained Variance'``.
+            Vertical axis label. Default: ``'Explained Variance'``.
         max_comp : int, optional
             Maximum number of ranked features in the curve. Default: ``10``.
         title : str or None, optional
-            Plot title; heatmap None selects a quantity-specific title. Default: ``'Explained Variance by Top Features'``.
+            Plot title. Default: ``'Explained Variance by Top Features'``.
         marker : str, optional
             Matplotlib marker style for the elbow curve. Default: ``'o'``.
         linestyle : str, optional
@@ -633,11 +634,11 @@ class vis:
         x : numpy.ndarray of shape (n_features,)
             Global feature contribution vector.
         xtitle : str, optional
-            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature Number'``.
+            Horizontal axis label. Default: ``'Feature Number'``.
         ytitle : str, optional
-            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Cumulative Explained Variance'``.
+            Vertical axis label. Default: ``'Cumulative Explained Variance'``.
         title : str or None, optional
-            Plot title; heatmap None selects a quantity-specific title. Default: ``'Cumulative Explained Variance by Top Features'``.
+            Plot title. Default: ``'Cumulative Explained Variance by Top Features'``.
         max_comp : int, optional
             Maximum number of ranked features in the curve. Default: ``10``.
         save_name : str or None, optional
@@ -705,11 +706,11 @@ class vis:
         cutoff : float, optional
             Include values greater than or equal to this cutoff. Default: ``0``.
         title : str or None, optional
-            Plot title; heatmap None selects a quantity-specific title. Default: ``'Generalized Correlation of Features to the Outcome'``.
+            Plot title. Default: ``'Generalized Correlation of Features to the Outcome'``.
         xtitle : str, optional
-            Horizontal axis label (bar plots swap axes when horizontal). Default: ``'Feature index'``.
+            Feature-axis label; placed on the vertical axis when horizontal=True. Default: ``'Feature index'``.
         ytitle : str, optional
-            Vertical axis label (bar plots swap axes when horizontal). Default: ``'Generalized Correlation'``.
+            Contribution-axis label; placed on the horizontal axis when horizontal=True. Default: ``'Generalized Correlation'``.
         rotation : float, optional
             Feature tick-label rotation in degrees. Default: ``0``.
         label : numpy.ndarray or None, optional
