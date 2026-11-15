@@ -5,7 +5,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 project = "Q-SHAP"
 author = "Zhongli Jiang and Dabao Zhang"
 release = "3.0.0"
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "sphinx.ext.viewcode"]
-html_theme = "alabaster"
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx_rtd_theme",
+]
+html_theme = "sphinx_rtd_theme"
+html_show_copyright = False
 autodoc_member_order = "bysource"
 exclude_patterns = ["_build"]

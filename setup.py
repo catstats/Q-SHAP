@@ -78,7 +78,7 @@ setup(
         'lightgbm': ['lightgbm'],
         'catboost': ['catboost'],
         'all': ['xgboost', 'lightgbm', 'catboost'],
-        'docs': ['sphinx>=7,<10'],
+        'docs': ['sphinx>=7,<10', 'sphinx-rtd-theme>=3,<4'],
     },
     classifiers=[
         'Operating System :: Microsoft :: Windows',
