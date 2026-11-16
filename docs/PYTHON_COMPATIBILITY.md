@@ -161,3 +161,32 @@ The CI matrix includes 3.12–3.15; its 3.15 job installs XGBoost and LightGBM
 and explicitly leaves native CatBoost coverage to the 3.12–3.14 jobs while
 cp315 wheels are unavailable. Linux CI has been configured, not run locally.
 Windows, Intel macOS, and free-threaded CPython were not validated here.
+
+
+## Ubuntu 26.04 source installation on 2026-11-16
+
+The local qshap 3.0.0 source at `d64f2ab` was installed in fresh Ubuntu
+26.04.1 containers with CPython 3.12.16 from the deadsnakes PPA and GCC
+15.2.0. ARM64 ran natively on Apple Silicon; x86-64 ran under Docker's
+QEMU emulation. The scope was source installation and a small compiled
+decision-tree calculation.
+
+| Architecture | Without Python 3.12 headers | After installing `python3.12-dev` |
+| --- | --- | --- |
+| x86-64 | Expected missing-header error and interpreter-specific guidance | Source build, extension import, and C++ calculation succeeded |
+| ARM64 | Expected missing-header error and interpreter-specific guidance | Source build, extension import, and C++ calculation succeeded |
+
+Each environment first verified that `/usr/include/python3.12/Python.h`
+was absent. Installing the matching development package from the same
+provider made the header available; the same unmodified package source
+then built successfully. The runtime check required the installed Linux
+ELF extension to load and exercised `backend="cpp"` outside the source
+directory. The 32-observation, four-feature decision-tree example verified
+finite contributions, local-to-global column sums, and agreement between
+the contribution total and the fitted model's training R-squared.
+
+Both environments used NumPy 2.5.5, Numba 0.68.1, SHAP
+0.54.1, and scikit-learn 1.9.1. The full model regression
+suite and paper benchmarks were not run in these containers. The editor's
+interpreter provider and exact dependency versions were unspecified; this
+test reproduces the missing-header condition and verifies its remedy.
