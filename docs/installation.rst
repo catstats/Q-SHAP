@@ -3,9 +3,7 @@ Installation and supported environments
 
 qshap 3.0.0 supports Python >=3.9,<3.16 and NumPy <2.6. Python 3.15 requires
 Numba >=0.68; validation used NumPy 2.5.4. Exact interpreter versions and
-backend coverage are recorded in ``docs/PYTHON_COMPATIBILITY.md``. Standard
-CPython builds with the GIL are covered; free-threaded builds have not
-been validated.
+backend coverage are recorded in ``docs/PYTHON_COMPATIBILITY.md``.
 
 Install from PyPI (recommended)
 -------------------------------
