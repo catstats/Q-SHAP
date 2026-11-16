@@ -89,3 +89,7 @@ Compute contributions with any of these models
 Keep the feature matrix in its training column order. Contributions from
 different fitted models describe those respective models, so their values
 need not agree. See :doc:`local_contributions` to request local output.
+
+The loss decomposition uses tree-expectation baselines. Its sum can differ
+from ``model.score(x, y)`` when those baselines differ from the response mean,
+including in the XGBoost and CatBoost examples above.

@@ -94,8 +94,8 @@ observation selector in Jupyter:
 
 .. code-block:: python
 
-   vis.loss(result.loss)
+   vis.loss(result.loss, decimal=3)
 
-This helper uses the bar chart's default nonnegative cutoff. To inspect
-signed loss contributions, use ``vis.heatmap(result, quantity="loss")`` as in
-:doc:`local_contributions`.
+This helper displays both positive and negative loss contributions.
+For several observations together, use ``vis.heatmap(result, quantity="loss")``
+as in :doc:`local_contributions`.

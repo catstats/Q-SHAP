@@ -425,9 +425,10 @@ class gazer:
         Numeric symmetric CatBoost models use the specialized cached global
         algorithm when local output is disabled. This path is independent of
         ``backend`` and ``ncore``. Local output uses the matrix-valued path.
-        Global feature contributions can be negative; their sum is the model's
-        R-squared on the evaluated sample. Parallel processes can cost more than
-        serial computation for small datasets.
+        Global feature contributions can be negative. The loss decomposition
+        uses the trees' expectation baselines, so its sum need not exactly equal
+        ``model.score(x, y)`` when those baselines differ from the response mean.
+        Parallel processes can cost more than serial computation for small datasets.
         """
 
         if local is not None:

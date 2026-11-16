@@ -49,94 +49,85 @@ class vis:
 
         Notes
         -----
-        The cutoff and feature limit must leave at least one value to display.
+        Use ``cutoff=-np.inf`` to include negative values. The cutoff and
+        feature limit must leave at least one value to display.
         """
         
-        # Calculate the sum of x
-        x_sum = np.sum(x)
-        x_len = np.size(x)
-        cutoff_feature = np.sum(x >= cutoff)
-        show_len = min(x_len, max_feature, cutoff_feature)
-
-        # Sort x and keep track of the indices
-        indices = np.argsort(x)[::-1]  # Indices of sorted elements (in descending order)
-            
-        sorted_x = x[indices]          # Sorted x
-        indices = indices[:show_len]
+        x = np.asarray(x, dtype=float)
+        if x.ndim != 1 or not x.size or not np.all(np.isfinite(x)):
+            raise ValueError("x must be a nonempty, finite one-dimensional vector")
         if label is not None:
-            if len(x)!=len(label):
-            #error: the length of label and and x must match 
+            label = np.asarray(label)
+            if label.shape != x.shape:
                 raise ValueError("The length of the label and x must match")
-            else:
-                sorted_label = label[indices]
-                sorted_label = sorted_label[:show_len]
-            
-        sorted_x = sorted_x[:show_len]
 
-        # Creating a color map based on the sorted values
-        # Normalize the sorted_x values to the range [0, 1]
-        normalized_x = (sorted_x - min(sorted_x)) / (max(sorted_x) - min(sorted_x))
+        x_sum = np.sum(x)
+        indices = np.argsort(x)[::-1]
+        indices = indices[x[indices] >= cutoff][:max_feature]
+        if not indices.size:
+            raise ValueError("The cutoff and max_feature must leave at least one value to display")
+        sorted_x = x[indices]
+        tick_labels = indices if label is None else label[indices]
 
-        # Get the colormap
-        cmap = plt.get_cmap(color_map_name)
+        # Equal values, including an all-zero row, still need visible colors.
+        spread = np.ptp(sorted_x)
+        normalized_x = (
+            (sorted_x - np.min(sorted_x)) / spread
+            if spread > 0 else np.full(sorted_x.shape, 0.65)
+        )
+        colors = plt.get_cmap(color_map_name)(normalized_x)
+        lower = min(0.0, float(np.min(sorted_x)))
+        upper = max(0.0, float(np.max(sorted_x)))
+        span = upper - lower or 1.0
+        text_offset = span * 0.02
+        limits = (
+            lower - 0.15 * span if lower < 0 else 0,
+            upper + 0.15 * span if upper > 0 else (0 if lower < 0 else 1),
+        )
 
-        # Generate colors from the colormap
-        colors = cmap(normalized_x)
-        
-        # Define an offset for the text to ensure it doesn't touch the bars
-        text_offset = max(sorted_x) * 0.02  # 2% of the max value as the offset
-        
         if not horizontal:
-            # Create the bar chart
             bars = plt.bar(range(len(sorted_x)), sorted_x, color=colors)
-
-            # Label the x-ticks with the original indices
-            if label is not None:
-                plt.xticks(range(len(sorted_x)), sorted_label, rotation=rotation)
-            else:
-                plt.xticks(range(len(sorted_x)), indices, rotation=rotation)
-            
-            # Adding the text on top of the bars
+            plt.xticks(range(len(sorted_x)), tick_labels, rotation=rotation)
             for bar in bars:
-                height = bar.get_height()  # Get the height of the bar
-                # Place the text at the top of the bar, slightly above
-                plt.text(bar.get_x() + bar.get_width() / 2, height + text_offset, f'{height:.{decimal}f}', ha='center', va='bottom')
-            
-            plt.ylim(0, max(sorted_x) * 1.1)
-
-            if model_rsq:
-                # Add text for the sum of values
-                plt.text(len(sorted_x) - 1, max(sorted_x), f'Model R²: {round(x_sum, 3)}', 
-                    horizontalalignment='right', verticalalignment='top', fontsize=12)
-                
+                height = bar.get_height()
+                positive = height >= 0
+                plt.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    height + (text_offset if positive else -text_offset),
+                    f'{height:.{decimal}f}', ha='center',
+                    va='bottom' if positive else 'top',
+                )
+            plt.ylim(*limits)
+            if lower < 0:
+                plt.axhline(0, color='0.5', linewidth=0.8)
             plt.xlabel(xtitle)
             plt.ylabel(ytitle)
-            
         else:
             bars = plt.barh(range(len(sorted_x)), sorted_x, color=colors)
-            
-            # Label the y-ticks with the original indices
-            if label is not None:
-                plt.yticks(range(len(sorted_x)), sorted_label, rotation=rotation)
-            else:
-                plt.yticks(range(len(sorted_x)), indices, rotation=rotation)
+            plt.yticks(range(len(sorted_x)), tick_labels, rotation=rotation)
             plt.gca().invert_yaxis()
-            
-            # Adding the text beside the bars
             for bar in bars:
-                width = bar.get_width()  # Get the width of the bar (since it's horizontal)
-                # Place the text to the right of the bar, slightly beyond its end
-                plt.text(width + text_offset, bar.get_y() + bar.get_height() / 2, f'{width:.{decimal}f}', 
-                        ha='left', va='center')
-                
-            plt.xlim(0, max(sorted_x) * 1.2)
-            
-            if model_rsq:
-                plt.text(max(sorted_x), len(sorted_x) - 1,f'Model R²: {round(x_sum, 3)}', 
-                horizontalalignment='right', verticalalignment='bottom', fontsize=12)
-                
+                width = bar.get_width()
+                positive = width >= 0
+                plt.text(
+                    width + (text_offset if positive else -text_offset),
+                    bar.get_y() + bar.get_height() / 2,
+                    f'{width:.{decimal}f}',
+                    ha='left' if positive else 'right', va='center',
+                )
+            plt.xlim(*limits)
+            if lower < 0:
+                plt.axvline(0, color='0.5', linewidth=0.8)
             plt.xlabel(ytitle)
             plt.ylabel(xtitle)
+
+        if model_rsq:
+            axis = plt.gca()
+            axis.text(
+                0.98, 0.05 if horizontal else 0.95,
+                f'Model R²: {round(x_sum, 3)}', transform=axis.transAxes,
+                ha='right', va='bottom' if horizontal else 'top', fontsize=12,
+            )
 
         # Add title
         plt.title(title)
@@ -172,7 +163,7 @@ class vis:
         Parameters
         ----------
         loss : numpy.ndarray of shape (n_samples, n_features)
-            Raw observation-level loss contributions.
+            Raw observation-level loss contributions; both signs are displayed.
         save_ind : int or None, optional
             Zero-based observation to save. None displays a notebook row selector. Default: ``None``.
         save_prefix : str, optional
@@ -196,54 +187,32 @@ class vis:
         None
             Displays an ipywidgets selector in notebooks or saves a selected row as PDF.
         """
-        def sample_loss(i):
-            plt.cla()  # Clear the current axes
-            if 0 <= i < loss.shape[0]:  # Check if i is within the valid range
-                vis.rsq(loss[i], title=title + " " + str(i), color_map_name=color_map_name, model_rsq=model_rsq, decimal=decimal, xtitle=xtitle, ytitle=ytitle)
-        
-        # # Slider for quick navigation
-        # i_slider = widgets.IntSlider(
-        #     value=0,
-        #     min=0,
-        #     max=x.shape[1]-1,
-        #     step=1,
-        #     description='Slider:',
-        #     continuous_update=False
-        # )
+        loss = np.asarray(loss, dtype=float)
+        if loss.ndim != 2 or not all(loss.shape) or not np.all(np.isfinite(loss)):
+            raise ValueError("loss must be a nonempty, finite two-dimensional matrix")
 
-        # Text input for precise entry
-        i_text = widgets.BoundedIntText(
-            value=0,
-            min=0,
-            max=loss.shape[0]-1,
-            step=1,
-            description='Sample Index',
-            style={'description_width': 'initial'},  # This ensures the description is not cut off
-            layout=Layout(width='150px'), 
-            continuous_update=True
-        )
-
-        # Link the slider and text input to keep them in sync
-        # widgets.jslink((i_slider, 'value'), (i_text, 'value'))
-
-        # # Display both the slider and the text input
-        # ui = widgets.VBox([i_slider, i_text])
-        ui = widgets.VBox([i_text])
-
-        # Use interactive_output to update the plot, linking both controls
-        out = widgets.interactive_output(sample_loss, {'i': i_text})
+        def sample_loss(i, save_name=None):
+            vis.rsq(
+                loss[i], title=title + " " + str(i),
+                color_map_name=color_map_name, model_rsq=model_rsq,
+                decimal=decimal, xtitle=xtitle, ytitle=ytitle,
+                cutoff=-np.inf, save_name=save_name,
+            )
 
         if save_ind is not None:
-            save_name = save_prefix + " " + str(save_ind)
-            vis.rsq(loss[save_ind], title=title + " " + str(save_ind), color_map_name=color_map_name, model_rsq=model_rsq, decimal=decimal, xtitle=xtitle, ytitle=ytitle, 
-                save_name=save_name)
-        else:
-            display(ui, out)
-        
-    # vis.loss(loss)
+            if not isinstance(save_ind, (int, np.integer)) or not 0 <= save_ind < len(loss):
+                raise ValueError("save_ind must be a valid zero-based observation index")
+            sample_loss(save_ind, save_prefix + " " + str(save_ind))
+            return
 
-    # # Find a lovely plot and save it, say for the 5-th sample
-    # vis.loss(loss, save_ind=10)
+        i_text = widgets.BoundedIntText(
+            value=0, min=0, max=len(loss)-1, step=1,
+            description='Sample Index',
+            style={'description_width': 'initial'},
+            layout=Layout(width='150px'), continuous_update=True,
+        )
+        out = widgets.interactive_output(sample_loss, {'i': i_text})
+        display(widgets.VBox([i_text]), out)
 
     @staticmethod
     def heatmap(
