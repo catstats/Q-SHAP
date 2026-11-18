@@ -301,6 +301,8 @@ class gazer:
             loss = np.zeros_like(x, dtype=np.float64)
             cumulative_prediction = np.full(x.shape[0], self.base_score, dtype=np.float64)
             xgb_dmatrix = xgboost.DMatrix(x)
+            if xgb_dmatrix.feature_names is None and xgb_booster.feature_names is not None:
+                xgb_dmatrix.feature_names = xgb_booster.feature_names
             
             iterator = tqdm(range(num_tree)) if progress_bar else range(num_tree)
 

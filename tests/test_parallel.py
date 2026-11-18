@@ -56,15 +56,30 @@ def test_parallel_completion_preserves_local_row_order(monkeypatch):
     assert events == ['progress', 'executor', 'complete', 'complete']
 
 
-def test_real_parallel_matches_serial():
+@pytest.mark.parametrize("named_model", [False, True], ids=["unnamed", "named-json"])
+def test_real_parallel_matches_serial(named_model, tmp_path):
     xgb = pytest.importorskip('xgboost')
     rng = np.random.default_rng(42)
     x = rng.normal(size=(24, 3))
     y = x[:, 0] - x[:, 1]
     model = xgb.XGBRegressor(n_estimators=2, max_depth=2, n_jobs=1).fit(x, y)
+    if named_model:
+        names = ["longitude", "latitude", "median_income"]
+        model.get_booster().feature_names = names
+        model_path = tmp_path / "model.json"
+        model.save_model(model_path)
+        model = xgb.XGBRegressor(n_jobs=1)
+        model.load_model(model_path)
+        assert model.get_booster().feature_names == names
+        pd = pytest.importorskip("pandas")
+        misordered = pd.DataFrame(x, columns=names[::-1])
+        with pytest.raises(ValueError, match="feature_names mismatch"):
+            gazer(model).rsq(misordered, y, progress_bar=False)
     explainer = gazer(model)
     serial = explainer.rsq(x, y, local=True, ncore=1, progress_bar=False)
     parallel = explainer.rsq(x, y, local=True, ncore=2, progress_bar=False)
+    assert serial.loss.shape == x.shape
+    assert np.isfinite(serial.loss).all()
     for field in ('loss', 'rsq', 'local_rsq'):
         np.testing.assert_allclose(getattr(serial, field), getattr(parallel, field),
                                    rtol=1e-8, atol=1e-10)
