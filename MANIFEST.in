@@ -1,5 +1,6 @@
 include README.md
 include figs/boston_housing.png
+include figs/xgboost_diabetes_rsq.png
 recursive-include qshap *.h
 recursive-include docs *.rst *.py *.md
 prune docs/_build

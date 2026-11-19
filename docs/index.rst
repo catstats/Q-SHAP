@@ -29,6 +29,14 @@ feature contributes to the fitted model's R-squared. See the
    contributions = gazer(model).rsq(X, y, progress_bar=False)
    vis.rsq(contributions, label=X.columns, horizontal=True, xtitle="Feature")
 
+.. figure:: ../figs/xgboost_diabetes_rsq.png
+   :width: 600px
+   :align: center
+   :alt: XGBoost feature contributions on the diabetes data. The largest
+         contributions come from s5 and bmi. The fitted model's R-squared is 0.631.
+
+   Output from the XGBoost example above.
+
 .. toctree::
    :maxdepth: 1
    :caption: Getting started
