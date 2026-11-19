@@ -36,6 +36,8 @@ Scikit-learn gradient boosting
 
 :download:`Download gradient_boosting.py <scripts/gradient_boosting.py>`.
 
+.. _xgboost-example:
+
 XGBoost
 -------
 
@@ -49,6 +51,8 @@ Pass the fitted ``XGBRegressor`` wrapper to Q-SHAP.
 
 :download:`Download xgboost_example.py <scripts/xgboost_example.py>`.
 
+.. _lightgbm-example:
+
 LightGBM
 --------
 
@@ -60,6 +64,8 @@ Install its optional backend with ``python -m pip install "qshap[lightgbm]"``.
    :end-before: # end:model
 
 :download:`Download lightgbm_example.py <scripts/lightgbm_example.py>`.
+
+.. _catboost-example:
 
 CatBoost
 --------
